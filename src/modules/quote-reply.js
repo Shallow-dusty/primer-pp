@@ -1,6 +1,7 @@
 // src/modules/quote-reply.js — Quote selected text into input
 
 import { TIMINGS, PANEL_ID } from '../core/constants.js';
+import { SELECTORS } from '../core/selectors.js';
 
 export function createQuoteReplyModule({ Logger }) {
     return {
@@ -102,7 +103,7 @@ export function createQuoteReplyModule({ Logger }) {
         },
 
         _insertQuote(text) {
-            const editor = document.querySelector('div.ql-editor[contenteditable="true"]');
+            const editor = document.querySelector(SELECTORS.EDITOR);
             if (!editor) {
                 Logger.warn('QuoteReply: editor not found');
                 return;

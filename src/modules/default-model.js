@@ -1,5 +1,7 @@
 // src/modules/default-model.js — Auto-select preferred model for new chats
 
+import { SELECTORS, MODEL_DETECT_MAP } from '../core/selectors.js';
+
 export function createDefaultModelModule({ storage, Core, Logger, TIMINGS }) {
     const STORAGE_KEY = 'gemini_default_model';
 
@@ -55,7 +57,7 @@ export function createDefaultModelModule({ storage, Core, Logger, TIMINGS }) {
             this._switching = true;
             try {
                 await this._waitForElement(
-                    'button.input-area-switch, [data-test-id="bard-mode-menu-button"]',
+                    SELECTORS.MODEL_BUTTON + ', ' + SELECTORS.MODEL_MENU_BUTTON,
                     5000
                 );
                 const currentModel = this._detectCurrentModel();
@@ -63,8 +65,8 @@ export function createDefaultModelModule({ storage, Core, Logger, TIMINGS }) {
                     Logger.info('Already on preferred model', { model: currentModel });
                     return;
                 }
-                const modeBtn = document.querySelector('button.input-area-switch') ||
-                                document.querySelector('[data-test-id="bard-mode-menu-button"]');
+                const modeBtn = document.querySelector(SELECTORS.MODEL_BUTTON) ||
+                                document.querySelector(SELECTORS.MODEL_MENU_BUTTON);
                 if (!modeBtn) return;
                 modeBtn.click();
                 await this._waitForElement(
@@ -90,26 +92,17 @@ export function createDefaultModelModule({ storage, Core, Logger, TIMINGS }) {
         },
 
         _detectCurrentModel() {
-            const map = this._getModelDetectMap();
-            const modeBtn = document.querySelector('button.input-area-switch');
+            const modeBtn = document.querySelector(SELECTORS.MODEL_BUTTON);
             if (modeBtn) {
                 const text = modeBtn.textContent.trim();
-                if (map[text]) return map[text];
+                if (MODEL_DETECT_MAP[text]) return MODEL_DETECT_MAP[text];
             }
-            const pill = document.querySelector('[data-test-id="bard-mode-menu-button"]');
+            const pill = document.querySelector(SELECTORS.MODEL_MENU_BUTTON);
             if (pill) {
                 const text = pill.textContent.trim().split(/\s/)[0];
-                if (map[text]) return map[text];
+                if (MODEL_DETECT_MAP[text]) return MODEL_DETECT_MAP[text];
             }
             return 'flash';
-        },
-
-        _getModelDetectMap() {
-            return {
-                'Fast': 'flash', '快速': 'flash', '高速': 'flash', '빠른': 'flash',
-                'Thinking': 'thinking', '思考': 'thinking', '사고': 'thinking',
-                'Pro': 'pro',
-            };
         },
 
         _waitForElement(selector, timeout) {

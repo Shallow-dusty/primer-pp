@@ -64,7 +64,7 @@ export function createDashboardUI({ Core, getCounterModule, applyTheme, getTheme
 
             modal.appendChild(content);
             overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+            (panelUI ? panelUI.mountOverlay(overlay) : document.body.appendChild(overlay));
 
             setTimeout(() => { hmContainer.scrollLeft = hmContainer.scrollWidth; }, 0);
         },
@@ -158,7 +158,7 @@ export function createDashboardUI({ Core, getCounterModule, applyTheme, getTheme
                 tooltip = document.createElement('div');
                 tooltip.id = 'g-heatmap-tooltip';
                 tooltip.className = 'g-tooltip';
-                document.body.appendChild(tooltip);
+                (panelUI ? panelUI.mountOverlay(tooltip) : document.body.appendChild(tooltip));
             }
 
             this._buildHeatmapGrid(hmGrid, monthRow, tooltip, cm, today, oneYearAgo, maxVal);

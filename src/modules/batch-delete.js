@@ -1,5 +1,7 @@
 // src/modules/batch-delete.js — Batch delete conversations from sidebar
 
+import { SELECTORS } from '../core/selectors.js';
+
 export function createBatchDeleteModule({ Core, Logger, getPanelUI }) {
     return {
         id: 'batch-delete',
@@ -35,40 +37,33 @@ export function createBatchDeleteModule({ Core, Logger, getPanelUI }) {
                 chatElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
                 await Core.sleep(300);
 
-                const menuBtn = chatElement.querySelector(
-                    'button[aria-label*="more" i], button[aria-label*="More" i], ' +
-                    'button[aria-label*="options" i], button[aria-label*="Options" i], ' +
-                    'button[data-test-id*="menu"], mat-icon[data-mat-icon-name="more_vert"]'
-                );
+                const moreSelector = SELECTORS.CHAT_MORE_BUTTON.join(', ');
+                let menuBtn = chatElement.querySelector(moreSelector);
                 if (!menuBtn) {
                     const parent = chatElement.closest('mat-list-item, [role="listitem"]') || chatElement.parentElement;
-                    const altBtn = parent?.querySelector('button[aria-label*="more" i], button[aria-label*="More" i]');
-                    if (altBtn) altBtn.click();
-                    else throw new Error('Menu button not found');
-                } else {
-                    (menuBtn.closest('button') || menuBtn).click();
+                    menuBtn = parent?.querySelector(moreSelector);
                 }
+                if (!menuBtn) throw new Error('Menu button not found');
+                (menuBtn.closest('button') || menuBtn).click();
                 await Core.sleep(400);
 
-                const menuItems = document.querySelectorAll('[role="menuitem"], mat-menu-item, button.mat-mdc-menu-item');
+                const menuItems = document.querySelectorAll(SELECTORS.MENU_ITEMS);
+                const deleteTexts = ['delete', '删除', '削除', '삭제', 'supprimer', 'eliminar', 'löschen'];
                 let deleteBtn = null;
                 menuItems.forEach(item => {
                     const text = item.textContent.trim().toLowerCase();
-                    if (text.includes('delete') || text.includes('删除')) deleteBtn = item;
+                    if (deleteTexts.some(t => text.includes(t))) deleteBtn = item;
                 });
                 if (!deleteBtn) throw new Error('Delete option not found');
                 deleteBtn.click();
                 await Core.sleep(400);
 
-                const confirmBtns = document.querySelectorAll(
-                    'button.confirm-button, button[data-test-id*="confirm"], ' +
-                    'mat-dialog-actions button, .mdc-dialog__actions button'
-                );
+                const confirmBtns = document.querySelectorAll(SELECTORS.CONFIRM_BUTTONS);
+                const confirmTexts = ['delete', '删除', '削除', '삭제', 'confirm', '确认', '確認', 'supprimer', 'eliminar', 'löschen'];
                 let confirmed = false;
                 confirmBtns.forEach(btn => {
                     const text = btn.textContent.trim().toLowerCase();
-                    if (text.includes('delete') || text.includes('删除') ||
-                        text.includes('confirm') || text.includes('确认')) {
+                    if (confirmTexts.some(t => text.includes(t))) {
                         btn.click();
                         confirmed = true;
                     }

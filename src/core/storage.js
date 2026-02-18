@@ -62,7 +62,7 @@ export function createExtensionStorage() {
 
         set(key, value) {
             cache[key] = value;
-            chrome.storage.local.set({ [key]: value });
+            chrome.storage.local.set({ [key]: value }).catch(e => console.error('storage.set failed:', key, e));
         },
 
         listKeys() {

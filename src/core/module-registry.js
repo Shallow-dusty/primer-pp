@@ -8,7 +8,8 @@ export function createModuleRegistry({ storage, GLOBAL_KEYS }) {
         modules,
 
         init() {
-            enabledIds = storage.get(GLOBAL_KEYS.MODULES, null);
+            const stored = storage.get(GLOBAL_KEYS.MODULES, null);
+            enabledIds = stored ? [...stored] : null;
             if (!enabledIds) {
                 // First run — enable modules with defaultEnabled: true
                 enabledIds = Object.values(modules)

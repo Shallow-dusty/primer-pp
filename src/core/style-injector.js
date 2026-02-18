@@ -2,13 +2,28 @@
 
 let injectedStyles = [];
 
-export function injectStyles(css, gmAddStyle) {
+/**
+ * Inject CSS into a target root (ShadowRoot or document.head).
+ * @param {string} css
+ * @param {Function|null} gmAddStyle - GM_addStyle (userscript only, injects globally)
+ * @param {ShadowRoot|null} shadowRoot - if provided, inject into shadow root instead of document.head
+ */
+export function injectStyles(css, gmAddStyle, shadowRoot) {
     if (typeof gmAddStyle === 'function') {
-        gmAddStyle(css);
+        // Userscript: GM_addStyle is global, but we still inject a <style> into shadow root for isolation
+        if (shadowRoot) {
+            const style = document.createElement('style');
+            style.textContent = css;
+            shadowRoot.appendChild(style);
+            injectedStyles.push(style);
+        } else {
+            gmAddStyle(css);
+        }
     } else {
+        const root = shadowRoot || document.head;
         const style = document.createElement('style');
         style.textContent = css;
-        document.head.appendChild(style);
+        root.appendChild(style);
         injectedStyles.push(style);
     }
 }

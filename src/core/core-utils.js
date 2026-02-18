@@ -1,6 +1,7 @@
 // src/core/core-utils.js — User detection, URL tools, date tools, sidebar scanning
 
 import { GLOBAL_KEYS, TEMP_USER } from './constants.js';
+import { SELECTORS } from './selectors.js';
 
 export function createCore({ storage }) {
     let currentUser = TEMP_USER;
@@ -10,10 +11,10 @@ export function createCore({ storage }) {
         // --- User Detection ---
         detectUser() {
             const selectors = [
-                'img[data-src*="googleusercontent"][alt*="@"]',
-                'img[alt*="@"]',
-                'button[aria-label*="@"]',
-                'a[aria-label*="@"]',
+                SELECTORS.USER_AVATAR,
+                SELECTORS.USER_IMG_ALT,
+                SELECTORS.USER_BTN_ARIA,
+                SELECTORS.USER_LINK_ARIA,
             ];
             for (const sel of selectors) {
                 const el = document.querySelector(sel);
@@ -66,9 +67,7 @@ export function createCore({ storage }) {
 
         // --- Sidebar Scanning ---
         scanSidebarChats() {
-            const items = document.querySelectorAll(
-                'mat-list-item a[mat-list-item-link], a.conversation-item, [role="listitem"] a'
-            );
+            const items = document.querySelectorAll(SELECTORS.SIDEBAR_ITEMS);
             const chats = [];
             items.forEach((el, i) => {
                 const title = el.textContent.trim();

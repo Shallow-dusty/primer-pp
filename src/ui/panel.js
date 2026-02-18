@@ -2,7 +2,27 @@
 
 import { PANEL_ID, DEFAULT_POS, GLOBAL_KEYS, TEMP_USER } from '../core/constants.js';
 
-export function createPanelUI({ storage, Core, Logger, getCounterModule, getModuleRegistry, applyTheme, getTheme, injectStyles }) {
+const HOST_ID = 'gemini-counter-host';
+let _shadowRoot = null;
+
+function _getOrCreateShadowRoot(css) {
+    let host = document.getElementById(HOST_ID);
+    if (!host) {
+        host = document.createElement('div');
+        host.id = HOST_ID;
+        host.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:2147483647;pointer-events:none;';
+        document.body.appendChild(host);
+        _shadowRoot = host.attachShadow({ mode: 'open' });
+        if (css) {
+            const style = document.createElement('style');
+            style.textContent = css;
+            _shadowRoot.appendChild(style);
+        }
+    }
+    return _shadowRoot || host.shadowRoot;
+}
+
+export function createPanelUI({ storage, Core, Logger, getCounterModule, getModuleRegistry, applyTheme, getTheme, injectStyles, panelCSS }) {
     return {
         _activeTab: 'stats',
         _dragMove: null,
@@ -12,6 +32,12 @@ export function createPanelUI({ storage, Core, Logger, getCounterModule, getModu
         _settingsUI: null,
         _dashboardUI: null,
         _detailsUI: null,
+
+        // Query within shadow root
+        _q(id) { return (_shadowRoot || document).getElementById(id); },
+
+        // Mount an overlay/modal into shadow root (for settings, dashboard, etc.)
+        mountOverlay(el) { _getOrCreateShadowRoot().appendChild(el); },
 
         setSubModules({ settingsUI, dashboardUI, detailsUI }) {
             this._settingsUI = settingsUI;
@@ -99,7 +125,11 @@ export function createPanelUI({ storage, Core, Logger, getCounterModule, getModu
                 container.appendChild(header);
                 container.appendChild(mainView);
                 container.appendChild(details);
-                document.body.appendChild(container);
+
+                const shadow = _getOrCreateShadowRoot(panelCSS);
+                const old = shadow.getElementById(PANEL_ID);
+                if (old) old.remove();
+                shadow.appendChild(container);
 
                 this.makeDraggable(container, header);
                 this.renderDetailsPane();
@@ -114,7 +144,7 @@ export function createPanelUI({ storage, Core, Logger, getCounterModule, getModu
         toggleDetails() {
             const cm = getCounterModule();
             cm.state.isExpanded = !cm.state.isExpanded;
-            const pane = document.getElementById('g-details-pane');
+            const pane = this._q('g-details-pane');
             if (pane) {
                 if (cm.state.isExpanded) {
                     pane.classList.add('expanded');
@@ -176,13 +206,13 @@ export function createPanelUI({ storage, Core, Logger, getCounterModule, getModu
             const user = Core.getCurrentUser();
             const inspecting = Core.getInspectingUser();
 
-            const bigDisplay = document.getElementById('g-big-display');
-            const subInfo = document.getElementById('g-sub-info');
-            const actionBtn = document.getElementById('g-action-btn');
-            const capsule = document.getElementById('g-user-capsule');
-            const modelBadge = document.getElementById('g-model-badge');
-            const quotaFill = document.getElementById('g-quota-fill');
-            const quotaLabel = document.getElementById('g-quota-label');
+            const bigDisplay = this._q('g-big-display');
+            const subInfo = this._q('g-sub-info');
+            const actionBtn = this._q('g-action-btn');
+            const capsule = this._q('g-user-capsule');
+            const modelBadge = this._q('g-model-badge');
+            const quotaFill = this._q('g-quota-fill');
+            const quotaLabel = this._q('g-quota-label');
             if (!bigDisplay) return;
 
             // Capsule

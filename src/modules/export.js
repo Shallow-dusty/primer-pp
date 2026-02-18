@@ -101,11 +101,42 @@ export function createExportModule({ storage, Core, Logger, getCounterModule }) 
             this._download(lines.join('\n'), `${this._getFilePrefix()}.md`, 'text/markdown');
         },
 
+        exportText() {
+            const cm = getCounterModule();
+            if (!cm?.state) { Logger.warn('ExportModule: counter state unavailable'); return; }
+            const user = Core.getCurrentUser();
+            const now = new Date().toISOString().slice(0, 10);
+            const streaks = cm.calculateStreaks ? cm.calculateStreaks() : {};
+            const lines = [
+                'Gemini Usage Report',
+                `User: ${user}  |  Exported: ${now}`,
+                '',
+                `Total Messages: ${cm.state.total}`,
+                `Chats Created: ${cm.state.totalChatsCreated}`,
+            ];
+            if (streaks.current !== undefined) lines.push(`Current Streak: ${streaks.current} days`);
+            if (streaks.best !== undefined) lines.push(`Best Streak: ${streaks.best} days`);
+            lines.push('');
+
+            const sorted = Object.entries(cm.state.dailyCounts || {}).sort(([a], [b]) => a.localeCompare(b));
+            const last30 = sorted.slice(-30);
+            if (last30.length > 0) {
+                lines.push('Daily Breakdown (Last 30 Days):');
+                for (const [date, entry] of last30) {
+                    const msg = entry.messages || 0;
+                    const bm = entry.byModel || {};
+                    lines.push(`  ${date}  msgs:${msg}  flash:${bm.flash||0}  thinking:${bm.thinking||0}  pro:${bm.pro||0}`);
+                }
+            }
+            this._download(lines.join('\n') + '\n', `${this._getFilePrefix()}.txt`, 'text/plain');
+        },
+
         renderExportButtons(container) {
             const buttons = [
                 { text: '📤 Export JSON', fn: () => this.exportJSON() },
                 { text: '📊 Export CSV', fn: () => this.exportCSV() },
                 { text: '📝 Export Markdown', fn: () => this.exportMarkdown() },
+                { text: '📄 Export Text', fn: () => this.exportText() },
             ];
             buttons.forEach(b => {
                 const btn = document.createElement('button');

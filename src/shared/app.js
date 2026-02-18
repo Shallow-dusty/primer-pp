@@ -55,14 +55,23 @@ export function createApp(storage, opts) {
     // --- Inject styles ---
     const doInjectStyles = (css) => injectStyles(css, gmAddStyle);
 
-    // --- Register modules ---
-    _registerModules(registry, { storage, Core, Logger, GLOBAL_KEYS, TIMINGS });
+    // --- Register modules (lazy getters passed so modules can access UI after init) ---
+    _registerModules(registry, {
+        storage, Core, Logger, GLOBAL_KEYS, TIMINGS,
+        getPanelUI: () => panelUI,
+        getModuleRegistry,
+        getCounterModule,
+        applyTheme,
+        getTheme,
+        injectStyles: doInjectStyles,
+    });
 
     // --- UI ---
     const panelUI = createPanelUI({
         storage, Core, Logger,
         getCounterModule, getModuleRegistry,
         applyTheme, getTheme, injectStyles: doInjectStyles,
+        panelCSS,
     });
 
     const settingsUI = createSettingsUI({
@@ -71,6 +80,7 @@ export function createApp(storage, opts) {
         applyTheme, getTheme,
         isDebugEnabled, setDebugEnabled, filterLogs,
         debugHelpers: _createDebugHelpers({ storage, Core, Logger }),
+        mountOverlay: (el) => panelUI.mountOverlay(el),
     });
 
     const dashboardUI = createDashboardUI({
@@ -99,7 +109,7 @@ export function createApp(storage, opts) {
             cm.currentModel = newModel;
             cm.accountType = newAcct;
 
-            if (!document.getElementById(PANEL_ID)) {
+            if (!panelUI._q(PANEL_ID)) {
                 panelUI.create();
             } else if (modelChanged || acctChanged) {
                 panelUI.update();
@@ -117,7 +127,6 @@ export function createApp(storage, opts) {
 
     return {
         start() {
-            if (panelCSS) doInjectStyles(panelCSS);
             registry.init();
 
             // Onboarding for newly enabled modules
@@ -142,8 +151,12 @@ export function createApp(storage, opts) {
 
 // --- Helper: Register all feature modules ---
 function _registerModules(registry, deps) {
-    const { storage, Core, Logger, GLOBAL_KEYS, TIMINGS } = deps;
-    const shared = { storage, Core, Logger, GLOBAL_KEYS, TIMINGS };
+    const { storage, Core, Logger, GLOBAL_KEYS, TIMINGS,
+            getPanelUI, getModuleRegistry, getCounterModule,
+            applyTheme: _applyTheme, getTheme, injectStyles: _injectStyles } = deps;
+    const shared = { storage, Core, Logger, GLOBAL_KEYS, TIMINGS,
+                     getPanelUI, getModuleRegistry, getCounterModule,
+                     applyTheme: _applyTheme, getTheme, injectStyles: _injectStyles };
 
     registry.register(createCounterModule(shared));
     registry.register(createExportModule(shared));

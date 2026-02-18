@@ -2,7 +2,7 @@
 
 import { PANEL_ID, GLOBAL_KEYS, VERSION } from '../core/constants.js';
 
-export function createSettingsUI({ storage, Core, Logger, getCounterModule, getModuleRegistry, getExportModule, applyTheme, getTheme, isDebugEnabled, setDebugEnabled, filterLogs, debugHelpers }) {
+export function createSettingsUI({ storage, Core, Logger, getCounterModule, getModuleRegistry, getExportModule, applyTheme, getTheme, isDebugEnabled, setDebugEnabled, filterLogs, debugHelpers, mountOverlay }) {
     return {
         // --- Settings Modal ---
         open(panelUI) {
@@ -58,7 +58,7 @@ export function createSettingsUI({ storage, Core, Logger, getCounterModule, getM
             modal.appendChild(header);
             modal.appendChild(body);
             overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+            (mountOverlay ? mountOverlay(overlay) : document.body.appendChild(overlay));
         },
 
         _renderExtensionsSection(body, panelUI) {
@@ -525,7 +525,7 @@ export function createSettingsUI({ storage, Core, Logger, getCounterModule, getM
             modal.appendChild(header);
             modal.appendChild(body);
             overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+            (mountOverlay ? mountOverlay(overlay) : document.body.appendChild(overlay));
         },
 
         // --- Debug Modal ---
@@ -682,7 +682,7 @@ export function createSettingsUI({ storage, Core, Logger, getCounterModule, getM
             modal.appendChild(header);
             modal.appendChild(body);
             overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+            (mountOverlay ? mountOverlay(overlay) : document.body.appendChild(overlay));
         },
 
         // --- Onboarding Modal ---
@@ -795,7 +795,7 @@ export function createSettingsUI({ storage, Core, Logger, getCounterModule, getM
 
             renderContent();
             overlay.appendChild(modal);
-            document.body.appendChild(overlay);
+            (mountOverlay ? mountOverlay(overlay) : document.body.appendChild(overlay));
         },
     };
 }

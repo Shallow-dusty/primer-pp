@@ -1,6 +1,7 @@
 // src/modules/counter.js — Message counter with model tracking, streaks, quota
 
 import { TIMINGS, GLOBAL_KEYS, TEMP_USER } from '../core/constants.js';
+import { SELECTORS, MODEL_DETECT_MAP } from '../core/selectors.js';
 
 export function createCounterModule({ storage, Core, Logger, getModuleRegistry, getPanelUI }) {
     const COOLDOWN = TIMINGS.COUNTER_COOLDOWN;
@@ -9,19 +10,6 @@ export function createCounterModule({ storage, Core, Logger, getModuleRegistry, 
         flash: { label: '3 Flash', multiplier: 0, color: '#34a853' },
         thinking: { label: '3 Flash Thinking', multiplier: 0.33, color: '#fbbc04' },
         pro: { label: '3 Pro', multiplier: 1, color: '#ea4335' },
-    };
-
-    const MODEL_DETECT_MAP = {
-        // EN
-        'Fast': 'flash', 'Flash': 'flash', 'flash': 'flash',
-        'Thinking': 'thinking', 'thinking': 'thinking',
-        'Pro': 'pro', 'pro': 'pro',
-        // ZH
-        '快速': 'flash', '思考': 'thinking',
-        // JA
-        '高速': 'flash',
-        // KO
-        '빠른': 'flash', '사고': 'thinking',
     };
 
     let _unsubStorage = null;
@@ -267,19 +255,19 @@ export function createCounterModule({ storage, Core, Logger, getModuleRegistry, 
         // --- Model Detection ---
         detectModel() {
             try {
-                const modeBtn = document.querySelector('button.input-area-switch');
+                const modeBtn = document.querySelector(SELECTORS.MODEL_BUTTON);
                 if (modeBtn) {
                     const text = modeBtn.textContent.trim();
                     const key = MODEL_DETECT_MAP[text];
                     if (key) return key;
                 }
-                const pillLabel = document.querySelector('[data-test-id="bard-mode-menu-button"]');
+                const pillLabel = document.querySelector(SELECTORS.MODEL_MENU_BUTTON);
                 if (pillLabel) {
                     const text = pillLabel.textContent.trim().split(/\s/)[0];
                     const key = MODEL_DETECT_MAP[text];
                     if (key) return key;
                 }
-                const selected = document.querySelector('.bard-mode-list-button.is-selected');
+                const selected = document.querySelector(SELECTORS.MODEL_SELECTED);
                 if (selected) {
                     const text = selected.textContent.trim().split(/\s/)[0];
                     const key = MODEL_DETECT_MAP[text];
@@ -291,7 +279,7 @@ export function createCounterModule({ storage, Core, Logger, getModuleRegistry, 
 
         detectAccountType() {
             try {
-                const pillboxBtn = document.querySelector('button.gds-pillbox-button, button.pillbox-btn');
+                const pillboxBtn = document.querySelector(SELECTORS.ACCOUNT_PILL);
                 if (pillboxBtn) {
                     const text = pillboxBtn.textContent.trim().toUpperCase();
                     if (text === 'ULTRA' || text.includes('ULTRA')) return 'ultra';
