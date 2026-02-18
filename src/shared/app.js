@@ -110,7 +110,7 @@ export function createApp(storage, opts) {
         registry.getEnabled().forEach(id => {
             const mod = registry.modules[id];
             if (mod && typeof mod.tick === 'function') {
-                try { mod.tick(); } catch (e) { /* silent */ }
+                try { mod.tick(); } catch (e) { Logger.debug(`tick failed: ${id}`, e); }
             }
         });
     }

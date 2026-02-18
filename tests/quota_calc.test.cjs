@@ -17,6 +17,17 @@ describe('quota_calc', () => {
                 assert.ok(MODEL_CONFIG[key].color, `${key} should have color`);
             }
         });
+
+        it('stays in sync with counter.js MODEL_CONFIG (guard against drift)', () => {
+            // counter.js defines identical MODEL_CONFIG inline for browser use
+            // If you change one, you must change the other
+            const expected = {
+                flash: { label: '3 Flash', multiplier: 0, color: '#34a853' },
+                thinking: { label: '3 Flash Thinking', multiplier: 0.33, color: '#fbbc04' },
+                pro: { label: '3 Pro', multiplier: 1, color: '#ea4335' },
+            };
+            assert.deepEqual(MODEL_CONFIG, expected);
+        });
     });
 
     describe('getWeightedQuota', () => {

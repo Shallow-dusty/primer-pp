@@ -30,6 +30,7 @@ export function createExportModule({ storage, Core, Logger, getCounterModule }) 
 
         exportJSON() {
             const cm = getCounterModule();
+            if (!cm?.state) { Logger.warn('ExportModule: counter state unavailable'); return; }
             const data = {
                 total: cm.state.total,
                 totalChatsCreated: cm.state.totalChatsCreated,
@@ -42,6 +43,7 @@ export function createExportModule({ storage, Core, Logger, getCounterModule }) 
 
         exportCSV() {
             const cm = getCounterModule();
+            if (!cm?.state) { Logger.warn('ExportModule: counter state unavailable'); return; }
             const header = 'Date,Messages,Chats,Flash,Thinking,Pro,Weighted';
             const rows = [];
             const sorted = Object.entries(cm.state.dailyCounts || {}).sort(([a], [b]) => a.localeCompare(b));
@@ -63,6 +65,7 @@ export function createExportModule({ storage, Core, Logger, getCounterModule }) 
 
         exportMarkdown() {
             const cm = getCounterModule();
+            if (!cm?.state) { Logger.warn('ExportModule: counter state unavailable'); return; }
             const user = Core.getCurrentUser();
             const now = new Date().toISOString().slice(0, 10);
             const streaks = cm.calculateStreaks ? cm.calculateStreaks() : {};

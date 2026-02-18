@@ -285,7 +285,7 @@ export function createCounterModule({ storage, Core, Logger, getModuleRegistry, 
                     const key = MODEL_DETECT_MAP[text];
                     if (key) return key;
                 }
-            } catch (e) { /* ignore */ }
+            } catch (e) { Logger.debug('detectModel failed', e); }
             return this.currentModel;
         },
 
@@ -298,7 +298,7 @@ export function createCounterModule({ storage, Core, Logger, getModuleRegistry, 
                     if (text === 'PRO' || text.includes('PRO')) return 'pro';
                 }
                 return 'free';
-            } catch (e) { /* ignore */ }
+            } catch (e) { Logger.debug('detectAccountType failed', e); }
             return this.accountType;
         },
 
@@ -336,7 +336,9 @@ export function createCounterModule({ storage, Core, Logger, getModuleRegistry, 
             let checkDate = (dailyData[todayStr]?.messages > 0) ? new Date(todayStr) : new Date(yesterdayStr);
             let current = 0;
 
-            while (true) {
+            const MAX_STREAK = 3650; // 10 years safety cap
+            let safetyCount = 0;
+            while (safetyCount++ < MAX_STREAK) {
                 const key = checkDate.toISOString().slice(0, 10);
                 if (dailyData[key] && dailyData[key].messages > 0) {
                     current++;

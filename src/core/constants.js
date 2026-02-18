@@ -34,4 +34,4 @@ export const DEFAULT_POS = {
 
 export const TEMP_USER = '__temp_detecting__';
 
-export const VERSION = '9.0.0';
+export const VERSION = '__BUILD_VERSION__';

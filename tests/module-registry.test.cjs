@@ -1,69 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-
-// Inline memory storage for testing
-function createMemoryStorage(initial = {}) {
-    const data = { ...initial };
-    return {
-        async init() {},
-        get(key, defaultVal) { return key in data ? data[key] : defaultVal; },
-        set(key, value) { data[key] = value; },
-        listKeys() { return Object.keys(data); },
-        onChange() { return () => {}; },
-        _raw() { return data; },
-    };
-}
-
-// Inline registry factory (mirrors src/core/module-registry.js logic)
-function createModuleRegistry({ storage, GLOBAL_KEYS }) {
-    const modules = Object.create(null);
-    let enabledIds = [];
-    return {
-        modules,
-        init() {
-            enabledIds = storage.get(GLOBAL_KEYS.MODULES, null);
-            if (!enabledIds) {
-                enabledIds = Object.values(modules)
-                    .filter(m => m.defaultEnabled).map(m => m.id);
-                storage.set(GLOBAL_KEYS.MODULES, enabledIds);
-            }
-            for (const id of enabledIds) {
-                const mod = modules[id];
-                if (mod && typeof mod.init === 'function') {
-                    try { mod.init(); } catch (e) { /* ignore */ }
-                }
-            }
-        },
-        register(mod) {
-            if (!mod || !mod.id) throw new Error('Module must have an id');
-            modules[mod.id] = mod;
-        },
-        isEnabled(id) { return enabledIds.includes(id); },
-        toggle(id) {
-            const mod = modules[id];
-            if (!mod) return;
-            const idx = enabledIds.indexOf(id);
-            if (idx >= 0) {
-                enabledIds.splice(idx, 1);
-                if (typeof mod.destroy === 'function') mod.destroy();
-            } else {
-                enabledIds.push(id);
-                if (typeof mod.init === 'function') mod.init();
-            }
-            storage.set(GLOBAL_KEYS.MODULES, enabledIds);
-        },
-        notifyUserChange(user) {
-            for (const id of enabledIds) {
-                const mod = modules[id];
-                if (mod && typeof mod.onUserChange === 'function') {
-                    mod.onUserChange(user);
-                }
-            }
-        },
-        getAll() { return Object.values(modules); },
-        getEnabled() { return enabledIds.slice(); },
-    };
-}
+const { createMemoryStorage } = require('../lib/storage.cjs');
+const { createModuleRegistry } = require('../lib/module-registry.cjs');
 
 const KEYS = { MODULES: 'gemini_enabled_modules' };
 
@@ -154,5 +92,36 @@ describe('ModuleRegistry', () => {
         const list = reg.getEnabled();
         list.push('fake');
         assert.ok(!reg.isEnabled('fake'));
+    });
+
+    it('init swallows module init errors', () => {
+        const storage = createMemoryStorage();
+        const reg = createModuleRegistry({ storage, GLOBAL_KEYS: KEYS });
+        reg.register({ id: 'bad', defaultEnabled: true, init() { throw new Error('boom'); } });
+        assert.doesNotThrow(() => reg.init());
+    });
+
+    it('toggle swallows destroy errors', () => {
+        const storage = createMemoryStorage();
+        const reg = createModuleRegistry({ storage, GLOBAL_KEYS: KEYS });
+        reg.register({ id: 'x', defaultEnabled: true, init() {}, destroy() { throw new Error('boom'); } });
+        reg.init();
+        assert.doesNotThrow(() => reg.toggle('x'));
+    });
+
+    it('toggle swallows init errors on enable', () => {
+        const storage = createMemoryStorage();
+        const reg = createModuleRegistry({ storage, GLOBAL_KEYS: KEYS });
+        reg.register({ id: 'x', defaultEnabled: false, init() { throw new Error('boom'); } });
+        reg.init();
+        assert.doesNotThrow(() => reg.toggle('x'));
+    });
+
+    it('notifyUserChange swallows onUserChange errors', () => {
+        const storage = createMemoryStorage();
+        const reg = createModuleRegistry({ storage, GLOBAL_KEYS: KEYS });
+        reg.register({ id: 'a', defaultEnabled: true, init() {}, onUserChange() { throw new Error('boom'); } });
+        reg.init();
+        assert.doesNotThrow(() => reg.notifyUserChange('user@example.com'));
     });
 });

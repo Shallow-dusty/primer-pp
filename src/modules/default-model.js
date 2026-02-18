@@ -1,8 +1,6 @@
 // src/modules/default-model.js — Auto-select preferred model for new chats
 
-import { TIMINGS } from '../core/constants.js';
-
-export function createDefaultModelModule({ storage, Core, Logger }) {
+export function createDefaultModelModule({ storage, Core, Logger, TIMINGS }) {
     const STORAGE_KEY = 'gemini_default_model';
 
     return {
@@ -14,25 +12,30 @@ export function createDefaultModelModule({ storage, Core, Logger }) {
 
         _preferredModel: 'pro',
         _lastUrl: '',
-        _pollTimer: null,
         _switching: false,
 
         init() {
             this._preferredModel = storage.get(STORAGE_KEY, 'pro');
             this._lastUrl = location.href;
-            this._startUrlWatcher();
             Logger.info('DefaultModelModule initialized', { preferred: this._preferredModel });
         },
 
         destroy() {
-            if (this._pollTimer) {
-                clearInterval(this._pollTimer);
-                this._pollTimer = null;
-            }
             this._switching = false;
         },
 
         onUserChange() {},
+
+        tick() {
+            const currentUrl = location.href;
+            if (currentUrl !== this._lastUrl) {
+                const wasChat = this._lastUrl.includes('/app/');
+                this._lastUrl = currentUrl;
+                if (this._isNewChat() || (!wasChat && this._isNewChat())) {
+                    this._attemptModelSwitch();
+                }
+            }
+        },
 
         setPreferredModel(model) {
             this._preferredModel = model;
@@ -45,19 +48,6 @@ export function createDefaultModelModule({ storage, Core, Logger }) {
             return (url.includes('/app') && !url.includes('/app/')) ||
                    url.endsWith('/app') ||
                    (url.match(/\/app\?[^/]*$/) !== null);
-        },
-
-        _startUrlWatcher() {
-            this._pollTimer = setInterval(() => {
-                const currentUrl = location.href;
-                if (currentUrl !== this._lastUrl) {
-                    const wasChat = this._lastUrl.includes('/app/');
-                    this._lastUrl = currentUrl;
-                    if (this._isNewChat() || (!wasChat && this._isNewChat())) {
-                        this._attemptModelSwitch();
-                    }
-                }
-            }, 800);
         },
 
         async _attemptModelSwitch() {

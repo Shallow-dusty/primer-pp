@@ -1,35 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
-
-// Inline minimal StorageAdapter for unit testing (mirrors createGMStorage logic)
-function createMemoryStorage(initial = {}) {
-    const data = { ...initial };
-    const listeners = {};
-    return {
-        async init() {},
-        get(key, defaultVal) {
-            return key in data ? data[key] : defaultVal;
-        },
-        set(key, value) {
-            const old = data[key];
-            data[key] = value;
-            if (listeners[key]) {
-                listeners[key].forEach(cb => cb(value, old));
-            }
-        },
-        listKeys() {
-            return Object.keys(data);
-        },
-        onChange(key, cb) {
-            if (!listeners[key]) listeners[key] = [];
-            listeners[key].push(cb);
-            return () => {
-                listeners[key] = listeners[key].filter(f => f !== cb);
-            };
-        },
-        _raw() { return data; },
-    };
-}
+const { createMemoryStorage } = require('../lib/storage.cjs');
 
 describe('StorageAdapter (memory)', () => {
 
@@ -83,5 +54,16 @@ describe('StorageAdapter (memory)', () => {
         const s = createMemoryStorage({ k: 'old' });
         s.set('k', 'new');
         assert.equal(s.get('k'), 'new');
+    });
+
+    it('onChange swallows callback errors', () => {
+        const s = createMemoryStorage();
+        s.onChange('x', () => { throw new Error('boom'); });
+        assert.doesNotThrow(() => s.set('x', 1));
+    });
+
+    it('_raw returns internal data object', () => {
+        const s = createMemoryStorage({ a: 1 });
+        assert.deepEqual(s._raw(), { a: 1 });
     });
 });

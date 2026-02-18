@@ -1,10 +1,13 @@
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import terser from '@rollup/plugin-terser';
+import replace from '@rollup/plugin-replace';
 import css from 'rollup-plugin-import-css';
 import copy from 'rollup-plugin-copy';
 import { readFileSync } from 'fs';
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf8'));
+const versionReplace = replace({ __BUILD_VERSION__: pkg.version, preventAssignment: true });
 const target = process.env.TARGET; // 'userscript' | 'extension' | undefined (both)
 
 const banner = `// ==UserScript==
@@ -33,9 +36,11 @@ const userscriptConfig = {
     sourcemap: false,
   },
   plugins: [
+    versionReplace,
     css({ output: false }),   // inline CSS into JS via import
     resolve(),
     commonjs(),
+    terser({ format: { comments: /==UserScript==[\s\S]*?==\/UserScript==/ } }),
   ],
 };
 
@@ -47,6 +52,7 @@ const extensionConfig = {
     sourcemap: false,
   },
   plugins: [
+    versionReplace,
     css({ output: 'styles.css' }),  // extract CSS to separate file
     resolve(),
     commonjs(),
