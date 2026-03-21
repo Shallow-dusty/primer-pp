@@ -1300,7 +1300,7 @@ export const PanelUI = {
                 const a = document.createElement('a');
                 a.href = url;
                 const _d = new Date();
-                a.download = `gemini-counter-${Core.getCurrentUser().split('@')[0]}-${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}.json`;
+                a.download = `primer-pp-${Core.getCurrentUser().split('@')[0]}-${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}.json`;
                 a.click();
                 URL.revokeObjectURL(url);
             };
