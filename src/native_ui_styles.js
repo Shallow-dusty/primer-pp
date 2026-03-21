@@ -12,78 +12,80 @@ export function injectNativeUIStyles() {
 
         .gc-filter-bar {
             display: flex;
-            gap: 6px;
-            padding: 8px 16px;
+            gap: 4px;
+            padding: 6px 12px;
             overflow-x: auto;
-            border-bottom: 1px solid var(--divider, rgba(255,255,255,0.06));
             align-items: center;
             flex-shrink: 0;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
             height: auto;
-            max-height: 40px;
+            max-height: 36px;
             align-self: start;
         }
         .gc-filter-bar::-webkit-scrollbar { display: none; }
 
         .gc-filter-tab {
-            padding: 5px 14px;
-            border-radius: 16px;
-            font-size: 13px;
+            padding: 4px 12px;
+            border-radius: 14px;
+            font-size: 12px;
             font-family: 'Google Sans', Roboto, sans-serif;
             white-space: nowrap;
             cursor: pointer;
-            border: 1px solid rgba(128,128,128,0.2);
+            border: none;
             background: transparent;
             color: var(--text-sub, #9aa0a6);
             font-weight: 400;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             line-height: 1.4;
             user-select: none;
+            opacity: 0.7;
         }
         .gc-filter-tab:hover {
-            background: var(--row-hover, rgba(255,255,255,0.08));
+            background: rgba(255,255,255,0.06);
             color: var(--text-main, #e8eaed);
+            opacity: 1;
         }
         .gc-filter-tab.active {
-            font-weight: 600;
-            color: var(--accent, #8ab4f8);
+            font-weight: 500;
+            opacity: 1;
         }
 
         .gc-sidebar-toolbar {
-            padding: 6px 16px;
-            border-bottom: 1px solid var(--divider, rgba(255,255,255,0.06));
+            padding: 4px 12px;
             height: auto;
-            max-height: 44px;
+            max-height: 40px;
             align-self: start;
         }
 
         .gc-sidebar-btn {
             background: transparent;
-            border: 1px solid var(--border, rgba(255,255,255,0.12));
+            border: none;
             color: var(--text-sub, #9aa0a6);
-            border-radius: 18px;
+            border-radius: 14px;
             padding: 5px 14px;
             font-size: 12px;
             font-family: 'Google Sans', Roboto, sans-serif;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
+            opacity: 0.6;
         }
         .gc-sidebar-btn:hover {
             color: var(--text-main, #e8eaed);
-            background: var(--row-hover, rgba(255,255,255,0.08));
+            background: rgba(255,255,255,0.06);
+            opacity: 1;
         }
         .gc-sidebar-btn.full-width {
             width: 100%;
         }
         .gc-sidebar-btn.danger {
-            background: #ea4335;
-            color: #fff;
-            border-color: transparent;
+            background: rgba(234,67,53,0.15);
+            color: #f28b82;
+            border: none;
         }
         .gc-sidebar-btn.danger:hover {
-            background: #d93025;
+            background: rgba(234,67,53,0.25);
         }
 
         .gc-sidebar-toolbar-active {

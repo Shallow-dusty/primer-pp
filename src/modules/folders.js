@@ -146,9 +146,8 @@ export const FoldersModule = {
         const isActive = this._activeFilter === folderId;
         tab.className = 'gc-filter-tab' + (isActive ? ' active' : '');
         const c = color || 'var(--accent, #8ab4f8)';
-        tab.style.borderColor = c + '40';
         if (isActive) {
-            tab.style.background = c + '25';
+            tab.style.background = c + '12';
             tab.style.color = c;
         }
         tab.textContent = label;
