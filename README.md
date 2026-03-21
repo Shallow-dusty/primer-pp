@@ -40,8 +40,8 @@ All modules can be individually enabled/disabled from the settings panel.
 ### Setup
 
 ```bash
-git clone https://github.com/Shallow-dusty/Gemini-Ultra-Toolkit.git
-cd Gemini-Ultra-Toolkit
+git clone https://github.com/Shallow-dusty/primer-pp.git
+cd primer-pp
 npm install
 ```
 
