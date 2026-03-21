@@ -1060,9 +1060,11 @@ export const FoldersModule = {
         deleteBtn.title = 'Delete';
         deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            if (confirm(`Delete "${folder.name}"?`)) {
-                this.deleteFolder(folderId);
-            }
+            NativeUI.showConfirm(
+                NativeUI.t(`确认删除文件夹 "${folder.name}"？`, `Delete folder "${folder.name}"?`),
+                () => this.deleteFolder(folderId),
+                { confirmText: NativeUI.t('删除', 'Delete'), danger: true }
+            );
         };
 
         const pinBtn = document.createElement('span');

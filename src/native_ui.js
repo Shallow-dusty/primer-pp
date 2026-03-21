@@ -1,4 +1,6 @@
 import { ModuleRegistry } from './module_registry.js';
+import { Core } from './core.js';
+import { getCurrentTheme } from './state.js';
 
 export const NativeUI = {
     isZH: navigator.language.startsWith('zh'),
@@ -63,6 +65,57 @@ export const NativeUI = {
             'button.input-area-switch',
             '[data-test-id="bard-mode-menu-button"]'
         ]);
+    },
+
+    /**
+     * Show a themed confirmation dialog (replaces native confirm()).
+     * @param {string} message - Confirmation message
+     * @param {Function} onConfirm - Called when user confirms
+     * @param {Object} [opts] - { confirmText, cancelText, danger }
+     */
+    showConfirm(message, onConfirm, opts = {}) {
+        const overlay = document.createElement('div');
+        overlay.className = 'settings-overlay';
+        const escHandler = (e) => { if (e.key === 'Escape') close(false); };
+        document.addEventListener('keydown', escHandler);
+        const close = (confirmed) => {
+            document.removeEventListener('keydown', escHandler);
+            overlay.remove();
+            if (confirmed) onConfirm();
+        };
+        overlay.onclick = (e) => { if (e.target === overlay) close(false); };
+
+        const modal = document.createElement('div');
+        modal.className = 'settings-modal';
+        modal.style.width = '280px';
+        try { Core.applyTheme(modal, getCurrentTheme()); } catch {}
+
+        const body = document.createElement('div');
+        body.style.cssText = 'padding:20px;font-size:13px;color:var(--text-main,#e8eaed);line-height:1.6;';
+        body.textContent = message;
+
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;padding:0 20px 16px;';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'settings-btn';
+        cancelBtn.style.cssText = 'width:auto;padding:8px 16px;';
+        cancelBtn.textContent = opts.cancelText || this.t('取消', 'Cancel');
+        cancelBtn.onclick = () => close(false);
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = 'settings-btn';
+        confirmBtn.style.cssText = `width:auto;padding:8px 16px;background:${opts.danger ? '#ea4335' : 'var(--accent,#8ab4f8)'};color:${opts.danger ? '#fff' : '#000'};font-weight:600;`;
+        confirmBtn.textContent = opts.confirmText || this.t('确认', 'Confirm');
+        confirmBtn.onclick = () => close(true);
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(confirmBtn);
+        modal.appendChild(body);
+        modal.appendChild(actions);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        confirmBtn.focus();
     },
 
     // Called from onDOMStructureChange — only processes dirty modules

@@ -120,9 +120,11 @@ export const BatchDeleteModule = {
             deleteBtn.style.cssText = 'background:#ea4335;color:#fff;border:none;border-radius:6px;padding:2px 10px;font-size:10px;cursor:pointer;';
             deleteBtn.textContent = NativeUI.t('\uD83D\uDDD1\uFE0F \u5220\u9664', '\uD83D\uDDD1\uFE0F Delete');
             deleteBtn.onclick = () => {
-                if (confirm(NativeUI.t('\u786E\u8BA4\u5220\u9664\u9009\u4E2D\u7684 ' + this._selected.size + ' \u4E2A\u5BF9\u8BDD\uFF1F', 'Delete ' + this._selected.size + ' selected conversation(s)?'))) {
-                    this._batchDelete();
-                }
+                NativeUI.showConfirm(
+                    NativeUI.t('确认删除选中的 ' + this._selected.size + ' 个对话？', 'Delete ' + this._selected.size + ' selected conversation(s)?'),
+                    () => this._batchDelete(),
+                    { confirmText: NativeUI.t('删除', 'Delete'), danger: true }
+                );
             };
             toolbar.appendChild(deleteBtn);
         }
@@ -281,9 +283,11 @@ export const BatchDeleteModule = {
             deleteBtn.style.cssText = 'background:#ea4335;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;';
             deleteBtn.textContent = 'Delete ' + this._selected.size + ' chats';
             deleteBtn.onclick = () => {
-                if (confirm('\u786E\u8BA4\u5220\u9664\u9009\u4E2D\u7684 ' + this._selected.size + ' \u4E2A\u5BF9\u8BDD\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002')) {
-                    this._batchDelete();
-                }
+                NativeUI.showConfirm(
+                    NativeUI.t('确认删除选中的 ' + this._selected.size + ' 个对话？此操作不可撤销。', 'Delete ' + this._selected.size + ' chats? This cannot be undone.'),
+                    () => this._batchDelete(),
+                    { confirmText: NativeUI.t('删除', 'Delete'), danger: true }
+                );
             };
             header.appendChild(deleteBtn);
         }
