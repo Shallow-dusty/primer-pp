@@ -79,10 +79,23 @@ export const UITweaksModule = {
         const pos = getComputedStyle(inputArea).position;
         if (pos === 'static' || pos === '') inputArea.style.position = 'relative';
         inputArea.appendChild(dots);
+
+        // Ctrl+Enter hint label
+        if (this.features.ctrlEnter.enabled) {
+            const HINT_ID = 'gc-tweaks-send-hint';
+            if (!document.getElementById(HINT_ID)) {
+                const hint = document.createElement('div');
+                hint.id = HINT_ID;
+                hint.style.cssText = 'position:absolute;bottom:4px;right:24px;font-size:9px;color:var(--text-sub,#9aa0a6);opacity:0.5;pointer-events:none;z-index:1;font-family:monospace;';
+                hint.textContent = 'Ctrl+Enter \u21B5';
+                inputArea.appendChild(hint);
+            }
+        }
     },
 
     removeNativeUI() {
         NativeUI.remove('gc-tweaks-indicator');
+        NativeUI.remove('gc-tweaks-send-hint');
     },
 
     _getStatusText() {
