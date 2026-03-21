@@ -1152,7 +1152,7 @@ export const FoldersModule = {
 
                 const chatTitle = document.createElement('span');
                 chatTitle.className = 'gf-chat-title';
-                chatTitle.textContent = chat.title.length > 20 ? chat.title.slice(0, 20) + '...' : chat.title;
+                chatTitle.textContent = chat.title;
                 chatTitle.title = chat.title;
 
                 const removeBtn = document.createElement('span');
