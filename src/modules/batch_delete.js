@@ -51,7 +51,7 @@ export const BatchDeleteModule = {
         } else {
             const enterBtn = document.createElement('button');
             enterBtn.className = 'gc-sidebar-btn full-width';
-            enterBtn.textContent = NativeUI.t('\uD83D\uDDD1\uFE0F \u6279\u91CF\u7BA1\u7406', '\uD83D\uDDD1\uFE0F Batch Manage');
+            enterBtn.textContent = NativeUI.t('\u6279\u91CF\u7BA1\u7406', 'Batch Manage');
             enterBtn.onclick = () => {
                 this._batchMode = true;
                 this._refreshNativeUI();
@@ -116,7 +116,7 @@ export const BatchDeleteModule = {
         if (this._selected.size > 0) {
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'gc-sidebar-btn danger';
-            deleteBtn.textContent = NativeUI.t('\uD83D\uDDD1\uFE0F \u5220\u9664', '\uD83D\uDDD1\uFE0F Delete');
+            deleteBtn.textContent = NativeUI.t('\u5220\u9664', 'Delete');
             deleteBtn.onclick = () => {
                 NativeUI.showConfirm(
                     NativeUI.t('确认删除选中的 ' + this._selected.size + ' 个对话？', 'Delete ' + this._selected.size + ' selected conversation(s)?'),
@@ -268,7 +268,7 @@ export const BatchDeleteModule = {
         header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
         const title = document.createElement('div');
         title.style.cssText = 'font-weight:600;font-size:13px;color:var(--text-main);';
-        title.textContent = '\uD83D\uDDD1\uFE0F Batch Delete';
+        title.textContent = 'Batch Delete';
         header.appendChild(title);
 
         if (this._deleting) {

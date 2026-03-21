@@ -57,43 +57,26 @@ export const UITweaksModule = {
 
     // --- \u539F\u751F UI \u6CE8\u5165 ---
     injectNativeUI() {
-        const IND_ID = 'gc-tweaks-indicator';
-        if (document.getElementById(IND_ID)) return;
+        // Only inject Ctrl+Enter hint when that mode is active
+        if (!this.features.ctrlEnter.enabled) return;
+
+        const HINT_ID = 'gc-tweaks-send-hint';
+        if (document.getElementById(HINT_ID)) return;
 
         const inputArea = NativeUI.getInputArea();
         if (!inputArea) return;
 
-        const dots = document.createElement('div');
-        dots.id = IND_ID;
-        dots.className = 'gc-tweaks-dots';
-        dots.title = this._getStatusText();
-
-        const keys = ['ctrlEnter', 'tabTitle', 'chatWidth'];
-        keys.forEach(key => {
-            const dot = document.createElement('div');
-            dot.className = 'gc-tweaks-dot' + (this.features[key]?.enabled ? ' on' : '');
-            dots.appendChild(dot);
-        });
-
         const pos = getComputedStyle(inputArea).position;
         if (pos === 'static' || pos === '') inputArea.style.position = 'relative';
-        inputArea.appendChild(dots);
 
-        // Ctrl+Enter hint label
-        if (this.features.ctrlEnter.enabled) {
-            const HINT_ID = 'gc-tweaks-send-hint';
-            if (!document.getElementById(HINT_ID)) {
-                const hint = document.createElement('div');
-                hint.id = HINT_ID;
-                hint.className = 'gc-send-hint';
-                hint.textContent = 'Ctrl+Enter \u21B5';
-                inputArea.appendChild(hint);
-            }
-        }
+        const hint = document.createElement('div');
+        hint.id = HINT_ID;
+        hint.className = 'gc-send-hint';
+        hint.textContent = 'Ctrl+Enter \u21B5';
+        inputArea.appendChild(hint);
     },
 
     removeNativeUI() {
-        NativeUI.remove('gc-tweaks-indicator');
         NativeUI.remove('gc-tweaks-send-hint');
     },
 

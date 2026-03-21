@@ -227,17 +227,14 @@ export function injectNativeUIStyles() {
         /* ============================================ */
 
         .gc-model-lock {
-            font-size: 11px;
-            padding: 1px 5px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.06);
+            font-size: 9px;
             color: #9aa0a6;
-            margin-left: 4px;
+            margin-left: 2px;
             cursor: default;
             user-select: none;
             display: inline-flex;
             align-items: center;
-            gap: 2px;
+            opacity: 0.5;
         }
 
         /* ============================================ */

@@ -51,11 +51,9 @@ export const DefaultModelModule = {
         const lock = document.createElement('span');
         lock.id = LOCK_ID;
         lock.className = 'gc-model-lock';
-        lock.appendChild(createIcon('lock', 10));
-        const lockLabel = document.createElement('span');
-        lockLabel.textContent = this._preferredModel === 'flash' ? 'Fast' : this._preferredModel === 'thinking' ? 'Think' : 'Pro';
-        lock.appendChild(lockLabel);
-        lock.title = '\u5DF2\u9501\u5B9A: ' + lockLabel.textContent;
+        lock.appendChild(createIcon('lock', 9));
+        const modelLabel = this._preferredModel === 'flash' ? 'Fast' : this._preferredModel === 'thinking' ? 'Thinking' : 'Pro';
+        lock.title = NativeUI.t('\u5DF2\u9501\u5B9A: ' + modelLabel, 'Locked: ' + modelLabel);
         modelBtn.parentElement.appendChild(lock);
     },
 

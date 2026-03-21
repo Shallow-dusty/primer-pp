@@ -5852,11 +5852,9 @@
           const lock = document.createElement("span");
           lock.id = LOCK_ID;
           lock.className = "gc-model-lock";
-          lock.appendChild(createIcon("lock", 10));
-          const lockLabel = document.createElement("span");
-          lockLabel.textContent = this._preferredModel === "flash" ? "Fast" : this._preferredModel === "thinking" ? "Think" : "Pro";
-          lock.appendChild(lockLabel);
-          lock.title = "已锁定: " + lockLabel.textContent;
+          lock.appendChild(createIcon("lock", 9));
+          const modelLabel = this._preferredModel === "flash" ? "Fast" : this._preferredModel === "thinking" ? "Thinking" : "Pro";
+          lock.title = NativeUI.t("已锁定: " + modelLabel, "Locked: " + modelLabel);
           modelBtn.parentElement.appendChild(lock);
         },
         removeNativeUI() {
@@ -6050,7 +6048,7 @@
           } else {
             const enterBtn = document.createElement("button");
             enterBtn.className = "gc-sidebar-btn full-width";
-            enterBtn.textContent = NativeUI.t("🗑️ 批量管理", "🗑️ Batch Manage");
+            enterBtn.textContent = NativeUI.t("批量管理", "Batch Manage");
             enterBtn.onclick = () => {
               this._batchMode = true;
               this._refreshNativeUI();
@@ -6104,7 +6102,7 @@
           if (this._selected.size > 0) {
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "gc-sidebar-btn danger";
-            deleteBtn.textContent = NativeUI.t("🗑️ 删除", "🗑️ Delete");
+            deleteBtn.textContent = NativeUI.t("删除", "Delete");
             deleteBtn.onclick = () => {
               NativeUI.showConfirm(
                 NativeUI.t("确认删除选中的 " + this._selected.size + " 个对话？", "Delete " + this._selected.size + " selected conversation(s)?"),
@@ -6232,7 +6230,7 @@
           header.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;";
           const title = document.createElement("div");
           title.style.cssText = "font-weight:600;font-size:13px;color:var(--text-main);";
-          title.textContent = "🗑️ Batch Delete";
+          title.textContent = "Batch Delete";
           header.appendChild(title);
           if (this._deleting) {
             const progress = document.createElement("span");
@@ -6521,36 +6519,20 @@
         },
         // --- \u539F\u751F UI \u6CE8\u5165 ---
         injectNativeUI() {
-          const IND_ID = "gc-tweaks-indicator";
-          if (document.getElementById(IND_ID)) return;
+          if (!this.features.ctrlEnter.enabled) return;
+          const HINT_ID = "gc-tweaks-send-hint";
+          if (document.getElementById(HINT_ID)) return;
           const inputArea = NativeUI.getInputArea();
           if (!inputArea) return;
-          const dots = document.createElement("div");
-          dots.id = IND_ID;
-          dots.className = "gc-tweaks-dots";
-          dots.title = this._getStatusText();
-          const keys = ["ctrlEnter", "tabTitle", "chatWidth"];
-          keys.forEach((key) => {
-            const dot = document.createElement("div");
-            dot.className = "gc-tweaks-dot" + (this.features[key]?.enabled ? " on" : "");
-            dots.appendChild(dot);
-          });
           const pos = getComputedStyle(inputArea).position;
           if (pos === "static" || pos === "") inputArea.style.position = "relative";
-          inputArea.appendChild(dots);
-          if (this.features.ctrlEnter.enabled) {
-            const HINT_ID = "gc-tweaks-send-hint";
-            if (!document.getElementById(HINT_ID)) {
-              const hint = document.createElement("div");
-              hint.id = HINT_ID;
-              hint.className = "gc-send-hint";
-              hint.textContent = "Ctrl+Enter ↵";
-              inputArea.appendChild(hint);
-            }
-          }
+          const hint = document.createElement("div");
+          hint.id = HINT_ID;
+          hint.className = "gc-send-hint";
+          hint.textContent = "Ctrl+Enter ↵";
+          inputArea.appendChild(hint);
         },
         removeNativeUI() {
-          NativeUI.remove("gc-tweaks-indicator");
           NativeUI.remove("gc-tweaks-send-hint");
         },
         _getStatusText() {
@@ -6947,17 +6929,14 @@
         /* ============================================ */
 
         .gc-model-lock {
-            font-size: 11px;
-            padding: 1px 5px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.06);
+            font-size: 9px;
             color: #9aa0a6;
-            margin-left: 4px;
+            margin-left: 2px;
             cursor: default;
             user-select: none;
             display: inline-flex;
             align-items: center;
-            gap: 2px;
+            opacity: 0.5;
         }
 
         /* ============================================ */
