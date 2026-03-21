@@ -39,8 +39,10 @@ Tests enforce **100% branch/function/line/statement coverage** on `lib/`. `prete
 src/
 ├── main.js             → App entry: boots core, registers modules, starts main loop
 ├── core.js             → User/model detection, URL parsing, sidebar scanning
-├── panel_ui.js         → Main floating panel + settings + dashboard + details pane
-├── native_ui.js        → Native Gemini UI injection points
+├── panel_ui.js         → Main floating panel + details pane + core rendering
+├── panel_settings.js   → Settings, Onboarding, Debug, Calibration modals
+├── panel_dashboard.js  → Analytics dashboard with heatmap + model distribution
+├── native_ui.js        → Native Gemini UI injection points + showConfirm/showToast
 ├── state.js            → Shared mutable state
 ├── constants.js        → GLOBAL_KEYS, TIMINGS, VERSION
 ├── module_registry.js  → Module lifecycle management
