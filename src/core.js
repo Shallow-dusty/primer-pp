@@ -118,7 +118,16 @@ export const Core = {
         return new Promise(r => setTimeout(r, ms));
     },
 
-    scanSidebarChats() {
+    _sidebarCache: null,
+    _sidebarCacheTime: 0,
+
+    scanSidebarChats(forceRefresh = false) {
+        const now = Date.now();
+        if (!forceRefresh && this._sidebarCache &&
+            now - this._sidebarCacheTime < 2000 &&
+            (this._sidebarCache.length === 0 || this._sidebarCache[0].element?.isConnected)) {
+            return this._sidebarCache;
+        }
         const items = [];
         document.querySelectorAll('a[href*="/app/"]').forEach(el => {
             const href = el.getAttribute('href') || '';
@@ -131,7 +140,14 @@ export const Core = {
                 items.push({ id: match[1], title, element: el, href });
             }
         });
+        this._sidebarCache = items;
+        this._sidebarCacheTime = now;
         return items;
+    },
+
+    invalidateSidebarCache() {
+        this._sidebarCache = null;
+        this._sidebarCacheTime = 0;
     },
 
     // --- URL utilities ---

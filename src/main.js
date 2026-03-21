@@ -136,6 +136,7 @@ function onModelMutation() {
 
 // --- Reactive path: DOM structure change (DOMWatcher, debounce 1500ms) ---
 function onDOMStructureChange() {
+    Core.invalidateSidebarCache();
     if (ModuleRegistry.isEnabled('counter') && !document.getElementById(PANEL_ID)) {
         PanelUI.create();
     }
