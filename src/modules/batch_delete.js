@@ -44,16 +44,14 @@ export const BatchDeleteModule = {
 
         const toolbar = document.createElement('div');
         toolbar.id = TOOLBAR_ID;
-        toolbar.style.cssText = 'padding:4px 12px;border-bottom:1px solid rgba(255,255,255,0.06);height:auto;max-height:40px;align-self:start;';
+        toolbar.className = 'gc-sidebar-toolbar';
 
         if (this._batchMode) {
             this._renderBatchToolbar(toolbar);
         } else {
             const enterBtn = document.createElement('button');
-            enterBtn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;width:100%;';
+            enterBtn.className = 'gc-sidebar-btn full-width';
             enterBtn.textContent = NativeUI.t('\uD83D\uDDD1\uFE0F \u6279\u91CF\u7BA1\u7406', '\uD83D\uDDD1\uFE0F Batch Manage');
-            enterBtn.onmouseenter = () => { enterBtn.style.color = '#e8eaed'; };
-            enterBtn.onmouseleave = () => { enterBtn.style.color = '#9aa0a6'; };
             enterBtn.onclick = () => {
                 this._batchMode = true;
                 this._refreshNativeUI();
@@ -87,10 +85,10 @@ export const BatchDeleteModule = {
     },
 
     _renderBatchToolbar(toolbar) {
-        toolbar.style.cssText = 'padding:4px 12px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:6px;height:auto;max-height:40px;overflow:hidden;';
+        toolbar.className = 'gc-sidebar-toolbar gc-sidebar-toolbar-active';
 
         const selectAllBtn = document.createElement('button');
-        selectAllBtn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;';
+        selectAllBtn.className = 'gc-sidebar-btn';
         selectAllBtn.textContent = NativeUI.t('\u5168\u9009', 'Select All');
         selectAllBtn.onclick = () => {
             const chats = this._scanChats();
@@ -99,7 +97,7 @@ export const BatchDeleteModule = {
         };
 
         const cancelBtn = document.createElement('button');
-        cancelBtn.style.cssText = 'background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;';
+        cancelBtn.className = 'gc-sidebar-btn';
         cancelBtn.textContent = NativeUI.t('\u53D6\u6D88', 'Cancel');
         cancelBtn.onclick = () => {
             this._batchMode = false;
@@ -108,7 +106,7 @@ export const BatchDeleteModule = {
         };
 
         const countLabel = document.createElement('span');
-        countLabel.style.cssText = 'font-size:10px;color:#8ab4f8;flex:1;text-align:center;';
+        countLabel.className = 'gc-count-label';
         countLabel.textContent = NativeUI.t('\u5DF2\u9009 ' + this._selected.size + ' \u4E2A', this._selected.size + ' selected');
 
         toolbar.appendChild(selectAllBtn);
@@ -117,7 +115,7 @@ export const BatchDeleteModule = {
 
         if (this._selected.size > 0) {
             const deleteBtn = document.createElement('button');
-            deleteBtn.style.cssText = 'background:#ea4335;color:#fff;border:none;border-radius:6px;padding:2px 10px;font-size:10px;cursor:pointer;';
+            deleteBtn.className = 'gc-sidebar-btn danger';
             deleteBtn.textContent = NativeUI.t('\uD83D\uDDD1\uFE0F \u5220\u9664', '\uD83D\uDDD1\uFE0F Delete');
             deleteBtn.onclick = () => {
                 NativeUI.showConfirm(
@@ -137,7 +135,7 @@ export const BatchDeleteModule = {
             const check = document.createElement('div');
             check.className = 'gc-batch-check';
             const isChecked = this._selected.has(chat.id);
-            check.style.cssText = 'width:16px;height:16px;border-radius:3px;border:2px solid ' + (isChecked ? '#8ab4f8' : '#5f6368') + ';background:' + (isChecked ? '#8ab4f8' : 'transparent') + ';flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;margin-right:6px;vertical-align:middle;';
+            check.dataset.checked = isChecked ? 'true' : 'false';
             check.textContent = isChecked ? '\u2713' : '';
             check.onclick = (e) => {
                 e.preventDefault();

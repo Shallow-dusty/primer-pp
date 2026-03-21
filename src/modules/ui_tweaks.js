@@ -65,14 +65,13 @@ export const UITweaksModule = {
 
         const dots = document.createElement('div');
         dots.id = IND_ID;
-        dots.style.cssText = 'display:flex;gap:3px;position:absolute;bottom:4px;right:4px;pointer-events:none;z-index:1;';
+        dots.className = 'gc-tweaks-dots';
         dots.title = this._getStatusText();
 
         const keys = ['ctrlEnter', 'tabTitle', 'chatWidth'];
         keys.forEach(key => {
             const dot = document.createElement('div');
-            const on = this.features[key]?.enabled;
-            dot.style.cssText = 'width:4px;height:4px;border-radius:50%;background:' + (on ? '#8ab4f8' : '#555') + ';transition:background 0.2s;';
+            dot.className = 'gc-tweaks-dot' + (this.features[key]?.enabled ? ' on' : '');
             dots.appendChild(dot);
         });
 
@@ -86,7 +85,7 @@ export const UITweaksModule = {
             if (!document.getElementById(HINT_ID)) {
                 const hint = document.createElement('div');
                 hint.id = HINT_ID;
-                hint.style.cssText = 'position:absolute;bottom:4px;right:24px;font-size:9px;color:var(--text-sub,#9aa0a6);opacity:0.5;pointer-events:none;z-index:1;font-family:monospace;';
+                hint.className = 'gc-send-hint';
                 hint.textContent = 'Ctrl+Enter \u21B5';
                 inputArea.appendChild(hint);
             }

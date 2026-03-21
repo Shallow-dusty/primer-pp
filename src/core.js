@@ -69,6 +69,8 @@ export const Core = {
         const vars = THEMES[resolved].vars;
         for (const [key, val] of Object.entries(vars)) {
             el.style.setProperty(key, val);
+            // Also set on :root so native UI injections outside the panel inherit theme vars
+            document.documentElement.style.setProperty(key, val);
         }
     },
 

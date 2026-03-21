@@ -70,27 +70,12 @@ export const QuoteReplyModule = {
         this._removeFab();
 
         const fab = document.createElement('div');
-        fab.style.cssText = [
-            'position:fixed',
-            'z-index:2147483646',
-            'background:var(--accent, #8ab4f8)',
-            'color:#fff',
-            'padding:4px 10px',
-            'border-radius:14px',
-            'font-size:12px',
-            'font-weight:600',
-            'cursor:pointer',
-            'box-shadow:0 2px 8px rgba(0,0,0,0.3)',
-            'user-select:none',
-            'transition:opacity 0.15s, transform 0.15s',
-            'opacity:0',
-            'transform:scale(0.9)'
-        ].join(';');
+        fab.className = 'gc-quote-fab';
         fab.textContent = '\uD83D\uDCAC Quote';
 
         // Position near cursor, clamped to viewport
-        const fabW = 80;
-        const fabH = 28;
+        const fabW = 90;
+        const fabH = 30;
         let left = Math.min(x + 8, window.innerWidth - fabW - 10);
         let top = Math.max(y - fabH - 8, 10);
         fab.style.left = left + 'px';
@@ -106,10 +91,7 @@ export const QuoteReplyModule = {
         this._fab = fab;
 
         // Animate in
-        requestAnimationFrame(() => {
-            fab.style.opacity = '1';
-            fab.style.transform = 'scale(1)';
-        });
+        requestAnimationFrame(() => fab.classList.add('visible'));
 
         // Auto-dismiss after timeout
         setTimeout(() => {

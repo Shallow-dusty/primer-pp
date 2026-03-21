@@ -2,6 +2,7 @@ import { TIMINGS } from '../constants.js';
 import { Logger } from '../logger.js';
 import { Core } from '../core.js';
 import { NativeUI } from '../native_ui.js';
+import { createIcon } from '../icons.js';
 import { CounterModule } from './counter.js';
 
 export const DefaultModelModule = {
@@ -49,9 +50,12 @@ export const DefaultModelModule = {
 
         const lock = document.createElement('span');
         lock.id = LOCK_ID;
-        lock.textContent = '\uD83D\uDD12';
-        lock.title = '\u5DF2\u9501\u5B9A: ' + (this._preferredModel === 'flash' ? 'Fast' : this._preferredModel === 'thinking' ? 'Thinking' : 'Pro');
-        lock.style.cssText = 'font-size:10px;opacity:0.6;margin-left:4px;cursor:default;user-select:none;';
+        lock.className = 'gc-model-lock';
+        lock.appendChild(createIcon('lock', 10));
+        const lockLabel = document.createElement('span');
+        lockLabel.textContent = this._preferredModel === 'flash' ? 'Fast' : this._preferredModel === 'thinking' ? 'Think' : 'Pro';
+        lock.appendChild(lockLabel);
+        lock.title = '\u5DF2\u9501\u5B9A: ' + lockLabel.textContent;
         modelBtn.parentElement.appendChild(lock);
     },
 

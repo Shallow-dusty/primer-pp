@@ -13,13 +13,12 @@ export const NativeUI = {
      */
     showToast(message, duration = 2000) {
         const toast = document.createElement('div');
-        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--bg,#303134);color:var(--text-main,#e8eaed);border:1px solid var(--border,rgba(255,255,255,0.12));padding:8px 20px;border-radius:12px;font-size:13px;font-family:"Google Sans",Roboto,sans-serif;z-index:2147483647;box-shadow:0 4px 16px rgba(0,0,0,0.3);opacity:0;transition:opacity 0.2s,transform 0.2s;';
+        toast.className = 'gc-toast';
         toast.textContent = message;
         document.body.appendChild(toast);
-        requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)'; });
+        requestAnimationFrame(() => toast.classList.add('visible'));
         setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(-50%) translateY(10px)';
+            toast.classList.remove('visible');
             setTimeout(() => toast.remove(), 200);
         }, duration);
     },

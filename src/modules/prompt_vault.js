@@ -51,12 +51,9 @@ export const PromptVaultModule = {
 
         const btn = document.createElement('button');
         btn.id = NATIVE_ID;
-        btn.className = 'gc-native-btn';
+        btn.className = 'gc-input-btn';
         btn.appendChild(createIcon('gem', 16));
         btn.title = 'Prompt Vault';
-        btn.style.cssText = 'background:transparent;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:50%;transition:background 0.2s;line-height:1;display:flex;align-items:center;';
-        btn.onmouseenter = () => { btn.style.background = 'rgba(128,128,128,0.2)'; };
-        btn.onmouseleave = () => { btn.style.background = 'transparent'; };
         btn.onclick = (e) => {
             e.stopPropagation();
             this._toggleQuickMenu(btn);

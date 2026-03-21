@@ -34,8 +34,7 @@ export const ExportModule = {
 
         const btn = document.createElement('button');
         btn.id = NATIVE_ID;
-        btn.className = 'gc-native-btn';
-        btn.style.cssText = 'background:transparent;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:50%;line-height:1;display:flex;align-items:center;opacity:0.6;';
+        btn.className = 'gc-header-btn';
         btn.appendChild(createIcon('download', 16));
         btn.title = 'Export conversation';
         btn.onclick = (e) => {

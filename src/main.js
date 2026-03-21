@@ -148,7 +148,10 @@ function onDOMStructureChange() {
 // ║                           INITIALIZATION                                ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
+import { injectNativeUIStyles } from './native_ui_styles.js';
+
 PanelUI.injectStyles();
+injectNativeUIStyles();
 ModuleRegistry.init();
 DOMWatcher.init();
 

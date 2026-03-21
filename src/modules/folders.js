@@ -106,7 +106,7 @@ export const FoldersModule = {
 
         const filterBar = document.createElement('div');
         filterBar.id = FILTER_ID;
-        filterBar.style.cssText = 'display:flex;gap:4px;padding:6px 12px;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,0.08);align-items:center;flex-shrink:0;scrollbar-width:none;height:auto;max-height:36px;align-self:start;';
+        filterBar.className = 'gc-filter-bar';
 
         this._renderFilterTabs(filterBar);
         if (!sidebar) return;
@@ -143,9 +143,14 @@ export const FoldersModule = {
 
     _createFilterTab(label, folderId, color) {
         const tab = document.createElement('button');
-        tab.className = 'gc-native-btn';
         const isActive = this._activeFilter === folderId;
-        tab.style.cssText = `padding:3px 10px;border-radius:14px;font-size:12px;white-space:nowrap;cursor:pointer;border:1px solid ${color || '#8ab4f8'}40;background:${isActive ? (color || '#8ab4f8') + '30' : 'transparent'};color:${isActive ? (color || '#8ab4f8') : '#aaa'};font-weight:${isActive ? '600' : '400'};transition:all 0.15s;`;
+        tab.className = 'gc-filter-tab' + (isActive ? ' active' : '');
+        const c = color || 'var(--accent, #8ab4f8)';
+        tab.style.borderColor = c + '40';
+        if (isActive) {
+            tab.style.background = c + '25';
+            tab.style.color = c;
+        }
         tab.textContent = label;
         tab.onclick = (e) => {
             e.stopPropagation();
