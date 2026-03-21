@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Primer++ for Gemini",
-  "version": "10.17",
+  "version": "11.0",
   "description": "Modular assistant platform for Gemini — counter, heatmap, quota, folders & more. Not affiliated with Google LLC.",
   "permissions": [
     "storage",

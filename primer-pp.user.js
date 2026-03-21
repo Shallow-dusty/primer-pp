@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Primer++ for Gemini (v10.17)
+// @name         Primer++ for Gemini (v11.0)
 // @namespace    http://tampermonkey.net/
-// @version      10.17
+// @version      11.0
 // @description  模块化架构：可扩展的 Gemini 助手平台 - 原生 UI 集成 + 模块引导 + 计数器 + 热力图 + 配额追踪 + 对话文件夹 (Pure Enhancement)
 // @author       Script Weaver
 // @match        https://gemini.google.com/*
@@ -162,7 +162,7 @@
         MODEL_MUTATION_DEBOUNCE: 500
       };
       QUOTA_COLORS = { safe: "#34a853", warn: "#fbbc04", danger: "#ea4335" };
-      VERSION = "10.17";
+      VERSION = "11.0";
       PANEL_ID = "gemini-monitor-panel-v7";
       DEFAULT_POS = { top: "20px", left: "auto", bottom: "auto", right: "220px" };
       TEMP_USER = "Guest";
@@ -441,6 +441,7 @@
           const vars = THEMES[resolved].vars;
           for (const [key, val] of Object.entries(vars)) {
             el.style.setProperty(key, val);
+            document.documentElement.style.setProperty(key, val);
           }
         },
         /** Start/stop matchMedia listener for auto theme */
@@ -490,7 +491,13 @@
         sleep(ms) {
           return new Promise((r) => setTimeout(r, ms));
         },
-        scanSidebarChats() {
+        _sidebarCache: null,
+        _sidebarCacheTime: 0,
+        scanSidebarChats(forceRefresh = false) {
+          const now = Date.now();
+          if (!forceRefresh && this._sidebarCache && now - this._sidebarCacheTime < 2e3 && (this._sidebarCache.length === 0 || this._sidebarCache[0].element?.isConnected)) {
+            return this._sidebarCache;
+          }
           const items = [];
           document.querySelectorAll('a[href*="/app/"]').forEach((el) => {
             const href = el.getAttribute("href") || "";
@@ -503,7 +510,13 @@
               items.push({ id: match[1], title, element: el, href });
             }
           });
+          this._sidebarCache = items;
+          this._sidebarCacheTime = now;
           return items;
+        },
+        invalidateSidebarCache() {
+          this._sidebarCache = null;
+          this._sidebarCacheTime = 0;
         },
         // --- URL utilities ---
         getChatId() {
@@ -534,10 +547,28 @@
   var init_native_ui = __esm({
     "src/native_ui.js"() {
       init_module_registry();
+      init_core();
+      init_state();
       NativeUI = {
         isZH: navigator.language.startsWith("zh"),
         t(zh, en) {
           return this.isZH ? zh : en;
+        },
+        /**
+         * Show a brief toast notification at the bottom of the screen.
+         * @param {string} message
+         * @param {number} [duration=2000] - ms before auto-dismiss
+         */
+        showToast(message, duration = 2e3) {
+          const toast = document.createElement("div");
+          toast.className = "gc-toast";
+          toast.textContent = message;
+          document.body.appendChild(toast);
+          requestAnimationFrame(() => toast.classList.add("visible"));
+          setTimeout(() => {
+            toast.classList.remove("visible");
+            setTimeout(() => toast.remove(), 200);
+          }, duration);
         },
         _findFirst(selectors) {
           for (const sel of selectors) {
@@ -591,6 +622,57 @@
             '[data-test-id="bard-mode-menu-button"]'
           ]);
         },
+        /**
+         * Show a themed confirmation dialog (replaces native confirm()).
+         * @param {string} message - Confirmation message
+         * @param {Function} onConfirm - Called when user confirms
+         * @param {Object} [opts] - { confirmText, cancelText, danger }
+         */
+        showConfirm(message, onConfirm, opts = {}) {
+          const overlay = document.createElement("div");
+          overlay.className = "settings-overlay";
+          const escHandler = (e) => {
+            if (e.key === "Escape") close(false);
+          };
+          document.addEventListener("keydown", escHandler);
+          const close = (confirmed) => {
+            document.removeEventListener("keydown", escHandler);
+            overlay.remove();
+            if (confirmed) onConfirm();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) close(false);
+          };
+          const modal = document.createElement("div");
+          modal.className = "settings-modal";
+          modal.style.width = "280px";
+          try {
+            Core.applyTheme(modal, getCurrentTheme());
+          } catch {
+          }
+          const body = document.createElement("div");
+          body.style.cssText = "padding:20px;font-size:13px;color:var(--text-main,#e8eaed);line-height:1.6;";
+          body.textContent = message;
+          const actions = document.createElement("div");
+          actions.style.cssText = "display:flex;gap:8px;justify-content:flex-end;padding:0 20px 16px;";
+          const cancelBtn = document.createElement("button");
+          cancelBtn.className = "settings-btn";
+          cancelBtn.style.cssText = "width:auto;padding:8px 16px;";
+          cancelBtn.textContent = opts.cancelText || this.t("取消", "Cancel");
+          cancelBtn.onclick = () => close(false);
+          const confirmBtn = document.createElement("button");
+          confirmBtn.className = "settings-btn";
+          confirmBtn.style.cssText = `width:auto;padding:8px 16px;background:${opts.danger ? "#ea4335" : "var(--accent,#8ab4f8)"};color:${opts.danger ? "#fff" : "#000"};font-weight:600;`;
+          confirmBtn.textContent = opts.confirmText || this.t("确认", "Confirm");
+          confirmBtn.onclick = () => close(true);
+          actions.appendChild(cancelBtn);
+          actions.appendChild(confirmBtn);
+          modal.appendChild(body);
+          modal.appendChild(actions);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          confirmBtn.focus();
+        },
         // Called from onDOMStructureChange — only processes dirty modules
         tick() {
           if (this._dirtyModules.size === 0) return;
@@ -615,6 +697,34 @@
           }
         }
       };
+    }
+  });
+
+  // lib/date_utils.js
+  var require_date_utils = __commonJS({
+    "lib/date_utils.js"(exports, module) {
+      "use strict";
+      function formatLocalDate3(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+      function getDayKey(resetHour, now) {
+        const d = now ? new Date(now.getTime()) : /* @__PURE__ */ new Date();
+        if (d.getHours() < resetHour) {
+          d.setDate(d.getDate() - 1);
+        }
+        return formatLocalDate3(d);
+      }
+      function getDayKeyForDate(date, resetHour) {
+        return getDayKey(resetHour, date);
+      }
+      function parseLocalDate(dateStr) {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      }
+      module.exports = { formatLocalDate: formatLocalDate3, getDayKey, getDayKeyForDate, parseLocalDate };
     }
   });
 
@@ -769,202 +879,11 @@
     }
   });
 
-  // src/guided_tour.js
-  var STEPS, GuidedTour;
-  var init_guided_tour = __esm({
-    "src/guided_tour.js"() {
-      init_constants();
-      init_native_ui();
-      STEPS = [
-        { sel: "#" + PANEL_ID, zh: "这是 Primer++ 控制面板，可拖拽移动", en: "This is the Primer++ control panel, drag to move" },
-        { sel: "#g-user-capsule", zh: "当前登录用户，点击可切换查看其他用户数据", en: "Current user, click to switch viewing other users" },
-        { sel: "#g-big-display", zh: "今日消息计数，实时更新", en: "Today's message count, updates in real-time" },
-        { sel: "#g-model-badge", zh: "当前模型显示（Flash/Thinking/Pro）", en: "Current model display (Flash/Thinking/Pro)" },
-        { sel: "#g-quota-wrap", zh: "配额进度条，可在设置中自定义上限", en: "Quota progress bar, customize limit in settings" },
-        { sel: "#g-action-btn", zh: "功能菜单：设置、仪表盘、导出等", en: "Action menu: settings, dashboard, export, etc." },
-        { sel: "#g-details-pane", zh: "详情区域，展示各模块的详细信息", en: "Details pane showing module-specific information" }
-      ];
-      GuidedTour = {
-        _current: 0,
-        _overlay: null,
-        _tooltip: null,
-        _onKey: null,
-        _onResize: null,
-        _onComplete: null,
-        hasSeen() {
-          try {
-            return !!GM_getValue(GLOBAL_KEYS.TOUR_SEEN, false);
-          } catch {
-            return false;
-          }
-        },
-        markSeen() {
-          try {
-            GM_setValue(GLOBAL_KEYS.TOUR_SEEN, true);
-          } catch {
-          }
-        },
-        start(onComplete) {
-          if (this._overlay) return;
-          this._onComplete = onComplete || null;
-          this._current = 0;
-          const ov = document.createElement("div");
-          ov.style.cssText = "position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646;pointer-events:none;border-radius:8px;transition:top .3s,left .3s,width .3s,height .3s,box-shadow .3s;";
-          document.body.appendChild(ov);
-          this._overlay = ov;
-          const tt = document.createElement("div");
-          tt.style.cssText = "position:fixed;z-index:2147483647;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(138,180,248,0.3);border-radius:10px;padding:14px 16px;max-width:280px;font-size:13px;line-height:1.5;box-shadow:0 8px 32px rgba(0,0,0,0.4);";
-          document.body.appendChild(tt);
-          this._tooltip = tt;
-          const blocker = document.createElement("div");
-          blocker.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483645;";
-          blocker.onclick = (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-          };
-          document.body.appendChild(blocker);
-          this._blocker = blocker;
-          this._onKey = (e) => {
-            if (e.key === "Escape") this.stop();
-            else if (e.key === "ArrowRight") this.next();
-            else if (e.key === "ArrowLeft") this.prev();
-          };
-          this._onResize = () => this._showStep(this._current);
-          document.addEventListener("keydown", this._onKey);
-          window.addEventListener("resize", this._onResize);
-          this._showStep(0);
-        },
-        stop() {
-          if (this._overlay) {
-            this._overlay.remove();
-            this._overlay = null;
-          }
-          if (this._tooltip) {
-            this._tooltip.remove();
-            this._tooltip = null;
-          }
-          if (this._blocker) {
-            this._blocker.remove();
-            this._blocker = null;
-          }
-          if (this._onKey) {
-            document.removeEventListener("keydown", this._onKey);
-            this._onKey = null;
-          }
-          if (this._onResize) {
-            window.removeEventListener("resize", this._onResize);
-            this._onResize = null;
-          }
-          this.markSeen();
-          const cb = this._onComplete;
-          this._onComplete = null;
-          if (cb) setTimeout(cb, 500);
-        },
-        next() {
-          if (this._current < STEPS.length - 1) this._showStep(++this._current);
-          else this.stop();
-        },
-        prev() {
-          if (this._current > 0) this._showStep(--this._current);
-        },
-        _showStep(i) {
-          const step = STEPS[i];
-          const el = document.querySelector(step.sel);
-          if (!el) {
-            this.next();
-            return;
-          }
-          const r = el.getBoundingClientRect();
-          const pad = 6;
-          const ov = this._overlay;
-          ov.style.top = r.top - pad + "px";
-          ov.style.left = r.left - pad + "px";
-          ov.style.width = r.width + pad * 2 + "px";
-          ov.style.height = r.height + pad * 2 + "px";
-          ov.style.boxShadow = "0 0 0 9999px rgba(0,0,0,0.6)";
-          const tt = this._tooltip;
-          tt.replaceChildren();
-          const text = document.createElement("div");
-          text.textContent = NativeUI.t(step.zh, step.en);
-          text.style.marginBottom = "12px";
-          tt.appendChild(text);
-          const nav = document.createElement("div");
-          nav.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;";
-          const counter = document.createElement("span");
-          counter.style.cssText = "font-size:11px;opacity:0.6;";
-          counter.textContent = `${i + 1} / ${STEPS.length}`;
-          nav.appendChild(counter);
-          const btnWrap = document.createElement("div");
-          btnWrap.style.cssText = "display:flex;gap:6px;";
-          const btnStyle = "padding:4px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;";
-          if (i > 0) {
-            const prevBtn = document.createElement("button");
-            prevBtn.style.cssText = btnStyle + "background:rgba(255,255,255,0.1);color:#e0e0e0;";
-            prevBtn.textContent = NativeUI.t("上一步", "Prev");
-            prevBtn.onclick = () => this.prev();
-            btnWrap.appendChild(prevBtn);
-          }
-          const skipBtn = document.createElement("button");
-          skipBtn.style.cssText = btnStyle + "background:rgba(255,255,255,0.1);color:#e0e0e0;";
-          skipBtn.textContent = NativeUI.t("跳过", "Skip");
-          skipBtn.onclick = () => this.stop();
-          btnWrap.appendChild(skipBtn);
-          const nextBtn = document.createElement("button");
-          nextBtn.style.cssText = btnStyle + "background:#8ab4f8;color:#1a1a2e;font-weight:600;";
-          nextBtn.textContent = i < STEPS.length - 1 ? NativeUI.t("下一步", "Next") : NativeUI.t("完成", "Done");
-          nextBtn.onclick = () => this.next();
-          btnWrap.appendChild(nextBtn);
-          nav.appendChild(btnWrap);
-          tt.appendChild(nav);
-          const gap = 12;
-          const ttRect = tt.getBoundingClientRect();
-          let top = r.bottom + gap + pad;
-          if (top + ttRect.height > window.innerHeight) {
-            top = r.top - pad - gap - ttRect.height;
-          }
-          let left = r.left + (r.width - ttRect.width) / 2;
-          left = Math.max(8, Math.min(left, window.innerWidth - ttRect.width - 8));
-          top = Math.max(8, top);
-          tt.style.top = top + "px";
-          tt.style.left = left + "px";
-        }
-      };
-    }
-  });
-
-  // lib/date_utils.js
-  var require_date_utils = __commonJS({
-    "lib/date_utils.js"(exports, module) {
-      "use strict";
-      function formatLocalDate(d) {
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        return `${y}-${m}-${day}`;
-      }
-      function getDayKey(resetHour, now) {
-        const d = now ? new Date(now.getTime()) : /* @__PURE__ */ new Date();
-        if (d.getHours() < resetHour) {
-          d.setDate(d.getDate() - 1);
-        }
-        return formatLocalDate(d);
-      }
-      function getDayKeyForDate(date, resetHour) {
-        return getDayKey(resetHour, date);
-      }
-      function parseLocalDate(dateStr) {
-        const [y, m, d] = dateStr.split("-").map(Number);
-        return new Date(y, m - 1, d);
-      }
-      module.exports = { formatLocalDate, getDayKey, getDayKeyForDate, parseLocalDate };
-    }
-  });
-
   // lib/counter_calc.js
   var require_counter_calc = __commonJS({
     "lib/counter_calc.js"(exports, module) {
       "use strict";
-      var { formatLocalDate, getDayKey, parseLocalDate } = require_date_utils();
+      var { formatLocalDate: formatLocalDate3, getDayKey, parseLocalDate } = require_date_utils();
       function calculateStreaks2(dailyCounts, resetHour, now) {
         const dates = Object.keys(dailyCounts || {}).sort();
         if (dates.length === 0) return { current: 0, best: 0 };
@@ -987,12 +906,12 @@
         const yesterdayDate = new Date(ref.getTime());
         if (yesterdayDate.getHours() < resetHour) yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayStr = formatLocalDate(yesterdayDate);
+        const yesterdayStr = formatLocalDate3(yesterdayDate);
         const startStr = dailyCounts[todayStr]?.messages > 0 ? todayStr : yesterdayStr;
         let checkDate = parseLocalDate(startStr);
         let current = 0;
         while (true) {
-          const key = formatLocalDate(checkDate);
+          const key = formatLocalDate3(checkDate);
           if (dailyCounts[key] && dailyCounts[key].messages > 0) {
             current++;
             checkDate.setDate(checkDate.getDate() - 1);
@@ -1370,6 +1289,169 @@
     }
   });
 
+  // src/guided_tour.js
+  var STEPS, GuidedTour;
+  var init_guided_tour = __esm({
+    "src/guided_tour.js"() {
+      init_constants();
+      init_native_ui();
+      STEPS = [
+        { sel: "#" + PANEL_ID, zh: "这是 Primer++ 控制面板，可拖拽移动", en: "This is the Primer++ control panel, drag to move" },
+        { sel: "#g-user-capsule", zh: "当前登录用户，点击可切换查看其他用户数据", en: "Current user, click to switch viewing other users" },
+        { sel: "#g-big-display", zh: "今日消息计数，实时更新", en: "Today's message count, updates in real-time" },
+        { sel: "#g-model-badge", zh: "当前模型显示（Flash/Thinking/Pro）", en: "Current model display (Flash/Thinking/Pro)" },
+        { sel: "#g-quota-wrap", zh: "配额进度条，可在设置中自定义上限", en: "Quota progress bar, customize limit in settings" },
+        { sel: "#g-action-btn", zh: "功能菜单：设置、仪表盘、导出等", en: "Action menu: settings, dashboard, export, etc." },
+        { sel: "#g-details-pane", zh: "详情区域，展示各模块的详细信息", en: "Details pane showing module-specific information" }
+      ];
+      GuidedTour = {
+        _current: 0,
+        _overlay: null,
+        _tooltip: null,
+        _onKey: null,
+        _onResize: null,
+        _onComplete: null,
+        hasSeen() {
+          try {
+            return !!GM_getValue(GLOBAL_KEYS.TOUR_SEEN, false);
+          } catch {
+            return false;
+          }
+        },
+        markSeen() {
+          try {
+            GM_setValue(GLOBAL_KEYS.TOUR_SEEN, true);
+          } catch {
+          }
+        },
+        start(onComplete) {
+          if (this._overlay) return;
+          this._onComplete = onComplete || null;
+          this._current = 0;
+          const ov = document.createElement("div");
+          ov.style.cssText = "position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646;pointer-events:none;border-radius:8px;transition:top .3s,left .3s,width .3s,height .3s,box-shadow .3s;";
+          document.body.appendChild(ov);
+          this._overlay = ov;
+          const tt = document.createElement("div");
+          tt.style.cssText = "position:fixed;z-index:2147483647;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(138,180,248,0.3);border-radius:10px;padding:14px 16px;max-width:280px;font-size:13px;line-height:1.5;box-shadow:0 8px 32px rgba(0,0,0,0.4);";
+          document.body.appendChild(tt);
+          this._tooltip = tt;
+          const blocker = document.createElement("div");
+          blocker.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483645;";
+          blocker.onclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          };
+          document.body.appendChild(blocker);
+          this._blocker = blocker;
+          this._onKey = (e) => {
+            if (e.key === "Escape") this.stop();
+            else if (e.key === "ArrowRight") this.next();
+            else if (e.key === "ArrowLeft") this.prev();
+          };
+          this._onResize = () => this._showStep(this._current);
+          document.addEventListener("keydown", this._onKey);
+          window.addEventListener("resize", this._onResize);
+          this._showStep(0);
+        },
+        stop() {
+          if (this._overlay) {
+            this._overlay.remove();
+            this._overlay = null;
+          }
+          if (this._tooltip) {
+            this._tooltip.remove();
+            this._tooltip = null;
+          }
+          if (this._blocker) {
+            this._blocker.remove();
+            this._blocker = null;
+          }
+          if (this._onKey) {
+            document.removeEventListener("keydown", this._onKey);
+            this._onKey = null;
+          }
+          if (this._onResize) {
+            window.removeEventListener("resize", this._onResize);
+            this._onResize = null;
+          }
+          this.markSeen();
+          const cb = this._onComplete;
+          this._onComplete = null;
+          if (cb) setTimeout(cb, 500);
+        },
+        next() {
+          if (this._current < STEPS.length - 1) this._showStep(++this._current);
+          else this.stop();
+        },
+        prev() {
+          if (this._current > 0) this._showStep(--this._current);
+        },
+        _showStep(i) {
+          const step = STEPS[i];
+          const el = document.querySelector(step.sel);
+          if (!el) {
+            this.next();
+            return;
+          }
+          const r = el.getBoundingClientRect();
+          const pad = 6;
+          const ov = this._overlay;
+          ov.style.top = r.top - pad + "px";
+          ov.style.left = r.left - pad + "px";
+          ov.style.width = r.width + pad * 2 + "px";
+          ov.style.height = r.height + pad * 2 + "px";
+          ov.style.boxShadow = "0 0 0 9999px rgba(0,0,0,0.6)";
+          const tt = this._tooltip;
+          tt.replaceChildren();
+          const text = document.createElement("div");
+          text.textContent = NativeUI.t(step.zh, step.en);
+          text.style.marginBottom = "12px";
+          tt.appendChild(text);
+          const nav = document.createElement("div");
+          nav.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;";
+          const counter = document.createElement("span");
+          counter.style.cssText = "font-size:11px;opacity:0.6;";
+          counter.textContent = `${i + 1} / ${STEPS.length}`;
+          nav.appendChild(counter);
+          const btnWrap = document.createElement("div");
+          btnWrap.style.cssText = "display:flex;gap:6px;";
+          const btnStyle = "padding:4px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;";
+          if (i > 0) {
+            const prevBtn = document.createElement("button");
+            prevBtn.style.cssText = btnStyle + "background:rgba(255,255,255,0.1);color:#e0e0e0;";
+            prevBtn.textContent = NativeUI.t("上一步", "Prev");
+            prevBtn.onclick = () => this.prev();
+            btnWrap.appendChild(prevBtn);
+          }
+          const skipBtn = document.createElement("button");
+          skipBtn.style.cssText = btnStyle + "background:rgba(255,255,255,0.1);color:#e0e0e0;";
+          skipBtn.textContent = NativeUI.t("跳过", "Skip");
+          skipBtn.onclick = () => this.stop();
+          btnWrap.appendChild(skipBtn);
+          const nextBtn = document.createElement("button");
+          nextBtn.style.cssText = btnStyle + "background:#8ab4f8;color:#1a1a2e;font-weight:600;";
+          nextBtn.textContent = i < STEPS.length - 1 ? NativeUI.t("下一步", "Next") : NativeUI.t("完成", "Done");
+          nextBtn.onclick = () => this.next();
+          btnWrap.appendChild(nextBtn);
+          nav.appendChild(btnWrap);
+          tt.appendChild(nav);
+          const gap = 12;
+          const ttRect = tt.getBoundingClientRect();
+          let top = r.bottom + gap + pad;
+          if (top + ttRect.height > window.innerHeight) {
+            top = r.top - pad - gap - ttRect.height;
+          }
+          let left = r.left + (r.width - ttRect.width) / 2;
+          left = Math.max(8, Math.min(left, window.innerWidth - ttRect.width - 8));
+          top = Math.max(8, top);
+          tt.style.top = top + "px";
+          tt.style.left = left + "px";
+        }
+      };
+    }
+  });
+
   // lib/model_config.js
   var require_model_config = __commonJS({
     "lib/model_config.js"(exports, module) {
@@ -1442,7 +1524,7 @@
   var require_export_formatter = __commonJS({
     "lib/export_formatter.js"(exports, module) {
       var { getWeightedQuota: getWeightedQuota2 } = require_quota_calc();
-      var { formatLocalDate } = require_date_utils();
+      var { formatLocalDate: formatLocalDate3 } = require_date_utils();
       function exportCSV2(dailyCounts, opts = {}) {
         const header = "Date,Messages,Chats,Flash,Thinking,Pro,Weighted";
         const rows = [];
@@ -1470,7 +1552,7 @@
         return header + "\n" + rows.join("\n") + "\n";
       }
       function exportMarkdown2(dailyCounts, opts = {}) {
-        const now = formatLocalDate(/* @__PURE__ */ new Date());
+        const now = formatLocalDate3(/* @__PURE__ */ new Date());
         const user = opts.user || "Unknown";
         const lines = [];
         lines.push("# Gemini Usage Report");
@@ -1555,8 +1637,7 @@
           if (!parent) return;
           const btn = document.createElement("button");
           btn.id = NATIVE_ID;
-          btn.className = "gc-native-btn";
-          btn.style.cssText = "background:transparent;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:50%;line-height:1;display:flex;align-items:center;opacity:0.6;";
+          btn.className = "gc-header-btn";
           btn.appendChild(createIcon("download", 16));
           btn.title = "Export conversation";
           btn.onclick = (e) => {
@@ -1627,12 +1708,13 @@
           a.download = filename;
           a.click();
           URL.revokeObjectURL(url);
+          NativeUI.showToast(NativeUI.t("已导出: " + filename, "Exported: " + filename));
         },
         _getFilePrefix() {
           const user = Core.getCurrentUser()?.split("@")[0] || "unknown";
           const now = /* @__PURE__ */ new Date();
           const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-          return `gemini-counter-${user}-${date}`;
+          return `primer-pp-${user}-${date}`;
         },
         exportJSON() {
           const cm = CounterModule;
@@ -1860,6 +1942,995 @@
     }
   });
 
+  // src/panel_settings.js
+  function openSettingsModal() {
+    const SETTINGS_MODAL_ID = "gemini-settings-modal";
+    if (document.getElementById(SETTINGS_MODAL_ID)) return;
+    const overlay = document.createElement("div");
+    overlay.id = SETTINGS_MODAL_ID;
+    overlay.className = "settings-overlay";
+    const escHandler = (e) => {
+      if (e.key === "Escape") closeOverlay();
+    };
+    document.addEventListener("keydown", escHandler);
+    const closeOverlay = () => {
+      document.removeEventListener("keydown", escHandler);
+      overlay.remove();
+    };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeOverlay();
+    };
+    const modal = document.createElement("div");
+    modal.className = "settings-modal";
+    Core.applyTheme(modal, getCurrentTheme());
+    const header = document.createElement("div");
+    header.className = "settings-header";
+    const title = document.createElement("h3");
+    setIconText(title, "settings", "Settings");
+    const closeBtn = document.createElement("span");
+    closeBtn.className = "settings-close";
+    closeBtn.appendChild(createIcon("x", 16));
+    closeBtn.onclick = () => closeOverlay();
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    const body = document.createElement("div");
+    body.className = "settings-body";
+    const extSection = document.createElement("div");
+    extSection.className = "settings-section";
+    const extTitle = document.createElement("div");
+    extTitle.className = "settings-section-title";
+    extTitle.textContent = "";
+    setIconText(extTitle, "package", "Feature Extensions");
+    extSection.appendChild(extTitle);
+    const PanelUI2 = this;
+    ModuleRegistry.getAll().forEach((mod) => {
+      const row = document.createElement("div");
+      row.className = "module-toggle-compact";
+      row.title = mod.description;
+      const label = document.createElement("div");
+      label.className = "module-compact-label";
+      const icon = document.createElement("span");
+      icon.className = "module-icon";
+      icon.appendChild(renderModIcon(mod, 16));
+      const name = document.createElement("span");
+      name.textContent = mod.name;
+      label.appendChild(icon);
+      label.appendChild(name);
+      const rightSide = document.createElement("div");
+      rightSide.style.cssText = "display:flex;align-items:center;gap:6px;";
+      if (typeof mod.getOnboarding === "function") {
+        const infoBtn = document.createElement("span");
+        infoBtn.className = "onboarding-info-btn";
+        infoBtn.appendChild(createIcon("info", 12));
+        infoBtn.title = "Show guide";
+        infoBtn.onclick = (e) => {
+          e.stopPropagation();
+          PanelUI2.showOnboarding(mod.id);
+        };
+        rightSide.appendChild(infoBtn);
+      }
+      const toggle = document.createElement("div");
+      toggle.className = `toggle-switch ${ModuleRegistry.isEnabled(mod.id) ? "on" : ""}`;
+      toggle.onclick = () => {
+        ModuleRegistry.toggle(mod.id);
+        toggle.classList.toggle("on");
+        if (CounterModule.state.isExpanded) {
+          PanelUI2.renderDetailsPane();
+        }
+      };
+      rightSide.appendChild(toggle);
+      row.appendChild(label);
+      row.appendChild(rightSide);
+      extSection.appendChild(row);
+    });
+    body.appendChild(extSection);
+    ModuleRegistry.getAll().forEach((mod) => {
+      if (ModuleRegistry.isEnabled(mod.id) && typeof mod.renderToSettings === "function") {
+        const modSection = document.createElement("div");
+        modSection.className = "settings-section";
+        const modTitle = document.createElement("div");
+        modTitle.className = "settings-section-title";
+        modTitle.textContent = "";
+        modTitle.appendChild(renderModIcon(mod, 12));
+        modTitle.appendChild(document.createTextNode(" " + mod.name + " Settings"));
+        modSection.appendChild(modTitle);
+        mod.renderToSettings(modSection);
+        body.appendChild(modSection);
+      }
+    });
+    const cm = CounterModule;
+    const resetSection = document.createElement("div");
+    resetSection.className = "settings-section";
+    const resetTitle = document.createElement("div");
+    resetTitle.className = "settings-section-title";
+    resetTitle.textContent = "Daily Reset";
+    resetSection.appendChild(resetTitle);
+    const resetRow = document.createElement("div");
+    resetRow.className = "settings-row";
+    const resetLabel = document.createElement("span");
+    resetLabel.className = "settings-label";
+    resetLabel.textContent = "Reset Hour";
+    const resetSelect = document.createElement("select");
+    resetSelect.className = "settings-select";
+    for (let h = 0; h < 24; h++) {
+      const opt = document.createElement("option");
+      opt.value = h;
+      opt.textContent = `${h.toString().padStart(2, "0")}:00`;
+      if (h === cm.resetHour) opt.selected = true;
+      resetSelect.appendChild(opt);
+    }
+    resetSelect.onchange = () => {
+      cm.resetHour = parseInt(resetSelect.value, 10);
+      try {
+        GM_setValue(GLOBAL_KEYS.RESET_HOUR, cm.resetHour);
+      } catch {
+      }
+      PanelUI2.update();
+    };
+    resetRow.appendChild(resetLabel);
+    resetRow.appendChild(resetSelect);
+    resetSection.appendChild(resetRow);
+    body.appendChild(resetSection);
+    const quotaSection = document.createElement("div");
+    quotaSection.className = "settings-section";
+    const quotaTitle = document.createElement("div");
+    quotaTitle.className = "settings-section-title";
+    quotaTitle.textContent = "Daily Quota";
+    quotaSection.appendChild(quotaTitle);
+    const quotaRow = document.createElement("div");
+    quotaRow.className = "settings-row";
+    const quotaLabelEl = document.createElement("span");
+    quotaLabelEl.className = "settings-label";
+    quotaLabelEl.textContent = "Message Limit";
+    const quotaInput = document.createElement("input");
+    quotaInput.type = "number";
+    quotaInput.min = "1";
+    quotaInput.max = "999";
+    quotaInput.value = cm.quotaLimit;
+    quotaInput.className = "settings-select";
+    quotaInput.style.width = "60px";
+    quotaInput.style.textAlign = "center";
+    quotaInput.onchange = () => {
+      const v = parseInt(quotaInput.value, 10);
+      if (v > 0 && v <= 999) {
+        cm.quotaLimit = v;
+        try {
+          GM_setValue(GLOBAL_KEYS.QUOTA, v);
+        } catch {
+        }
+        PanelUI2.update();
+      }
+    };
+    quotaRow.appendChild(quotaLabelEl);
+    quotaRow.appendChild(quotaInput);
+    quotaSection.appendChild(quotaRow);
+    body.appendChild(quotaSection);
+    const chartSection = document.createElement("div");
+    chartSection.className = "settings-section";
+    const chartTitle = document.createElement("div");
+    chartTitle.className = "settings-section-title";
+    chartTitle.textContent = "Usage History (Last 7 Days)";
+    chartSection.appendChild(chartTitle);
+    const chartContainer = document.createElement("div");
+    chartContainer.style.cssText = "background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; margin-top: 4px;";
+    const data = cm.getLast7DaysData();
+    const svgWidth = 268, svgHeight = 80, padding = 20;
+    const maxVal = Math.max(...data.map((d) => d.messages), 1);
+    const points = data.map((d, i) => ({
+      x: padding + i * ((svgWidth - 2 * padding) / 6),
+      y: svgHeight - padding - d.messages / maxVal * (svgHeight - 2 * padding),
+      val: d.messages,
+      label: d.label
+    }));
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", svgWidth);
+    svg.setAttribute("height", svgHeight + 20);
+    svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight + 20}`);
+    const areaPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const areaD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + ` L ${points[6].x} ${svgHeight - padding} L ${points[0].x} ${svgHeight - padding} Z`;
+    areaPath.setAttribute("d", areaD);
+    areaPath.setAttribute("fill", "rgba(138, 180, 248, 0.2)");
+    svg.appendChild(areaPath);
+    const linePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+    linePath.setAttribute("d", lineD);
+    linePath.setAttribute("fill", "none");
+    linePath.setAttribute("stroke", "var(--accent, #8ab4f8)");
+    linePath.setAttribute("stroke-width", "2");
+    linePath.setAttribute("stroke-linecap", "round");
+    linePath.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(linePath);
+    points.forEach((p) => {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", p.x);
+      circle.setAttribute("cy", p.y);
+      circle.setAttribute("r", "3");
+      circle.setAttribute("fill", "var(--accent, #8ab4f8)");
+      svg.appendChild(circle);
+      if (p.val > 0) {
+        const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        valText.setAttribute("x", p.x);
+        valText.setAttribute("y", p.y - 6);
+        valText.setAttribute("text-anchor", "middle");
+        valText.setAttribute("font-size", "8");
+        valText.setAttribute("fill", "var(--text-sub, #9aa0a6)");
+        valText.textContent = p.val;
+        svg.appendChild(valText);
+      }
+      const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      dateText.setAttribute("x", p.x);
+      dateText.setAttribute("y", svgHeight + 10);
+      dateText.setAttribute("text-anchor", "middle");
+      dateText.setAttribute("font-size", "8");
+      dateText.setAttribute("fill", "var(--text-sub, #9aa0a6)");
+      dateText.textContent = p.label;
+      svg.appendChild(dateText);
+    });
+    chartContainer.appendChild(svg);
+    chartSection.appendChild(chartContainer);
+    body.appendChild(chartSection);
+    const dataSection = document.createElement("div");
+    dataSection.className = "settings-section";
+    const dataTitle = document.createElement("div");
+    dataTitle.className = "settings-section-title";
+    dataTitle.textContent = "Data";
+    dataSection.appendChild(dataTitle);
+    if (ModuleRegistry.isEnabled("export")) {
+      ExportModule.renderExportButtons(dataSection);
+    } else {
+      const exportBtn = document.createElement("button");
+      exportBtn.className = "settings-btn";
+      setIconText(exportBtn, "download", "Export Data (JSON)");
+      exportBtn.onclick = () => {
+        const exportData = {
+          total: cm.state.total,
+          totalChatsCreated: cm.state.totalChatsCreated,
+          chats: cm.state.chats,
+          dailyCounts: cm.state.dailyCounts,
+          exportedAt: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const _d = /* @__PURE__ */ new Date();
+        a.download = `primer-pp-${Core.getCurrentUser().split("@")[0]}-${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+      dataSection.appendChild(exportBtn);
+    }
+    const calibrateBtn = document.createElement("button");
+    calibrateBtn.className = "settings-btn";
+    setIconText(calibrateBtn, "wrench", "Calibrate Data");
+    calibrateBtn.onclick = () => PanelUI2.openCalibrationModal();
+    dataSection.appendChild(calibrateBtn);
+    const resetPosBtn = document.createElement("button");
+    resetPosBtn.className = "settings-btn";
+    setIconText(resetPosBtn, "pin", "Reset Panel Position");
+    resetPosBtn.onclick = () => {
+      try {
+        GM_setValue(GLOBAL_KEYS.POS, DEFAULT_POS);
+      } catch {
+      }
+      closeOverlay();
+      location.reload();
+    };
+    dataSection.appendChild(resetPosBtn);
+    const tourBtn = document.createElement("button");
+    tourBtn.className = "settings-btn";
+    setIconText(tourBtn, "compass", "Guided Tour");
+    tourBtn.onclick = () => {
+      closeOverlay();
+      GuidedTour.start();
+    };
+    dataSection.appendChild(tourBtn);
+    body.appendChild(dataSection);
+    const debugSection = document.createElement("div");
+    debugSection.className = "settings-section";
+    const debugTitle = document.createElement("div");
+    debugTitle.className = "settings-section-title";
+    debugTitle.textContent = "Debug";
+    debugSection.appendChild(debugTitle);
+    const debugToggleRow = document.createElement("div");
+    debugToggleRow.className = "settings-row";
+    const debugLabel = document.createElement("span");
+    debugLabel.className = "settings-label";
+    debugLabel.textContent = "Enable Debug";
+    const debugToggle = document.createElement("div");
+    debugToggle.className = `toggle-switch ${isDebugEnabled() ? "on" : ""}`;
+    debugToggle.onclick = () => {
+      const enabled = !isDebugEnabled();
+      setDebugEnabled(enabled);
+      debugToggle.classList.toggle("on");
+      Logger.info("Debug mode toggled", { enabled });
+    };
+    debugToggleRow.appendChild(debugLabel);
+    debugToggleRow.appendChild(debugToggle);
+    debugSection.appendChild(debugToggleRow);
+    const logLevelRow = document.createElement("div");
+    logLevelRow.className = "settings-row";
+    const logLevelLabel = document.createElement("span");
+    logLevelLabel.className = "settings-label";
+    logLevelLabel.textContent = "Log Level";
+    const logSelect = document.createElement("select");
+    logSelect.className = "settings-select";
+    ["error", "warn", "info", "debug"].forEach((lvl) => {
+      const opt = document.createElement("option");
+      opt.value = lvl;
+      opt.textContent = lvl.toUpperCase();
+      if (lvl === Logger.getLevel()) opt.selected = true;
+      logSelect.appendChild(opt);
+    });
+    logSelect.onchange = () => Logger.setLevel(logSelect.value);
+    logLevelRow.appendChild(logLevelLabel);
+    logLevelRow.appendChild(logSelect);
+    debugSection.appendChild(logLevelRow);
+    const debugPanelBtn = document.createElement("button");
+    debugPanelBtn.className = "settings-btn";
+    setIconText(debugPanelBtn, "bug", "Open Debug Panel");
+    debugPanelBtn.onclick = () => PanelUI2.openDebugModal();
+    debugSection.appendChild(debugPanelBtn);
+    body.appendChild(debugSection);
+    const version = document.createElement("div");
+    version.className = "settings-version";
+    version.textContent = "Primer++ for Gemini v" + VERSION;
+    body.appendChild(version);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+  function showOnboarding(moduleId) {
+    const mod = ModuleRegistry.modules[moduleId];
+    if (!mod || typeof mod.getOnboarding !== "function") return;
+    const content = mod.getOnboarding();
+    if (!content) return;
+    let lang;
+    try {
+      lang = GM_getValue(GLOBAL_KEYS.ONBOARDING_LANG, "zh");
+    } catch {
+      lang = "zh";
+    }
+    const MODAL_ID = "gemini-onboarding-modal";
+    const existing = document.getElementById(MODAL_ID);
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.id = MODAL_ID;
+    overlay.className = "onboarding-overlay";
+    const escHandler = (e) => {
+      if (e.key === "Escape") closeOverlay();
+    };
+    document.addEventListener("keydown", escHandler);
+    const closeOverlay = () => {
+      document.removeEventListener("keydown", escHandler);
+      overlay.remove();
+    };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeOverlay();
+    };
+    const modal = document.createElement("div");
+    modal.className = "onboarding-modal";
+    Core.applyTheme(modal, getCurrentTheme());
+    const renderContent = () => {
+      modal.replaceChildren();
+      const t = content[lang] || content.zh || content.en;
+      const header = document.createElement("div");
+      header.className = "onboarding-header";
+      const title = document.createElement("h3");
+      title.textContent = "";
+      title.appendChild(renderModIcon(mod, 16));
+      title.appendChild(document.createTextNode(" " + mod.name));
+      const closeBtn = document.createElement("span");
+      closeBtn.className = "onboarding-close";
+      closeBtn.appendChild(createIcon("x", 16));
+      closeBtn.onclick = () => closeOverlay();
+      header.appendChild(title);
+      header.appendChild(closeBtn);
+      modal.appendChild(header);
+      const body = document.createElement("div");
+      body.className = "onboarding-body";
+      if (t.rant) {
+        const sec1 = document.createElement("div");
+        sec1.className = "onboarding-section";
+        const h1 = document.createElement("div");
+        h1.className = "onboarding-section-title";
+        h1.textContent = "";
+        h1.appendChild(createIcon("info", 14));
+        h1.appendChild(document.createTextNode(lang === "zh" ? " 为什么需要这个？" : " Why does this exist?"));
+        const p1 = document.createElement("div");
+        p1.className = "onboarding-text";
+        p1.textContent = t.rant;
+        sec1.appendChild(h1);
+        sec1.appendChild(p1);
+        body.appendChild(sec1);
+      }
+      if (t.features) {
+        const sec2 = document.createElement("div");
+        sec2.className = "onboarding-section";
+        const h2 = document.createElement("div");
+        h2.className = "onboarding-section-title";
+        h2.textContent = "";
+        h2.appendChild(createIcon("gem", 14));
+        h2.appendChild(document.createTextNode(lang === "zh" ? " 它能做什么？" : " What does it do?"));
+        const p2 = document.createElement("div");
+        p2.className = "onboarding-text";
+        p2.textContent = t.features;
+        sec2.appendChild(h2);
+        sec2.appendChild(p2);
+        body.appendChild(sec2);
+      }
+      if (t.guide) {
+        const sec3 = document.createElement("div");
+        sec3.className = "onboarding-section";
+        const h3el = document.createElement("div");
+        h3el.className = "onboarding-section-title";
+        h3el.textContent = "";
+        h3el.appendChild(createIcon("wrench", 14));
+        h3el.appendChild(document.createTextNode(lang === "zh" ? " 如何使用？" : " How to use?"));
+        const p3 = document.createElement("div");
+        p3.className = "onboarding-text";
+        p3.textContent = t.guide;
+        sec3.appendChild(h3el);
+        sec3.appendChild(p3);
+        body.appendChild(sec3);
+      }
+      modal.appendChild(body);
+      const footer = document.createElement("div");
+      footer.className = "onboarding-footer";
+      const langBtn = document.createElement("button");
+      langBtn.className = "onboarding-lang-btn";
+      langBtn.textContent = "";
+      langBtn.appendChild(createIcon("globe", 12));
+      langBtn.appendChild(document.createTextNode(lang === "zh" ? " EN" : " 中"));
+      langBtn.onclick = () => {
+        lang = lang === "zh" ? "en" : "zh";
+        try {
+          GM_setValue(GLOBAL_KEYS.ONBOARDING_LANG, lang);
+        } catch {
+        }
+        renderContent();
+      };
+      const startBtn = document.createElement("button");
+      startBtn.className = "onboarding-start-btn";
+      startBtn.textContent = lang === "zh" ? "开始使用 →" : "Get Started →";
+      startBtn.onclick = () => closeOverlay();
+      footer.appendChild(langBtn);
+      footer.appendChild(startBtn);
+      modal.appendChild(footer);
+    };
+    renderContent();
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+  function openDebugModal() {
+    const DEBUG_MODAL_ID = "gemini-debug-modal";
+    if (document.getElementById(DEBUG_MODAL_ID)) return;
+    const overlay = document.createElement("div");
+    overlay.id = DEBUG_MODAL_ID;
+    overlay.className = "debug-overlay";
+    let unsubscribe = null;
+    const escHandler = (e) => {
+      if (e.key === "Escape") closeModal();
+    };
+    document.addEventListener("keydown", escHandler);
+    const closeModal = () => {
+      document.removeEventListener("keydown", escHandler);
+      if (unsubscribe) unsubscribe();
+      overlay.remove();
+    };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeModal();
+    };
+    const modal = document.createElement("div");
+    modal.className = "debug-modal";
+    Core.applyTheme(modal, getCurrentTheme());
+    const header = document.createElement("div");
+    header.className = "debug-header";
+    const title = document.createElement("h3");
+    setIconText(title, "bug", "Debug Panel");
+    const closeBtn = document.createElement("span");
+    closeBtn.className = "debug-close";
+    closeBtn.appendChild(createIcon("x", 16));
+    closeBtn.onclick = () => closeModal();
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    const body = document.createElement("div");
+    body.className = "debug-body";
+    const info = document.createElement("div");
+    info.className = "debug-kv";
+    const infoLine = (label, value) => {
+      const div = document.createElement("div");
+      const strong = document.createElement("strong");
+      strong.textContent = label + ":";
+      div.appendChild(strong);
+      div.appendChild(document.createTextNode(" " + value));
+      return div;
+    };
+    const detected = Core.detectUser();
+    const current = Core.getCurrentUser();
+    const inspecting = Core.getInspectingUser();
+    const effective = detected || current;
+    const storageKey = effective && effective.includes("@") ? `gemini_store_${effective}` : "N/A";
+    info.appendChild(infoLine("Detected", detected || "null"));
+    info.appendChild(infoLine("Current", current));
+    info.appendChild(infoLine("Inspecting", inspecting));
+    info.appendChild(infoLine("Storage Key", storageKey));
+    info.appendChild(infoLine("Debug Enabled", String(isDebugEnabled())));
+    info.appendChild(infoLine("Log Level", Logger.getLevel()));
+    const filterRow = document.createElement("div");
+    filterRow.className = "debug-filter-row";
+    const filters = ["all", "error", "warn", "info", "debug"];
+    let activeFilter = "all";
+    let searchTerm = "";
+    const mkFilterBtn = (label) => {
+      const b = document.createElement("button");
+      b.className = "debug-filter-btn";
+      b.textContent = label.toUpperCase();
+      b.onclick = () => {
+        activeFilter = label;
+        Array.from(filterRow.children).forEach((el) => el.classList.remove("active"));
+        b.classList.add("active");
+        renderLogs();
+      };
+      return b;
+    };
+    filters.forEach((f, i) => {
+      const btn = mkFilterBtn(f);
+      if (i === 0) btn.classList.add("active");
+      filterRow.appendChild(btn);
+    });
+    const search = document.createElement("input");
+    search.className = "debug-search";
+    search.placeholder = "Search logs...";
+    search.oninput = () => {
+      searchTerm = search.value.trim().toLowerCase();
+      renderLogs();
+    };
+    const actions = document.createElement("div");
+    actions.className = "debug-actions";
+    const mkBtn = (label, onClick) => {
+      const b = document.createElement("button");
+      b.className = "settings-btn";
+      b.textContent = label;
+      b.onclick = onClick;
+      return b;
+    };
+    actions.appendChild(mkBtn("Show Detected User", () => debugShowDetectedUser()));
+    actions.appendChild(mkBtn("Dump Storage Keys", () => debugDumpStorageKeys()));
+    actions.appendChild(mkBtn("Dump Gemini Storage", () => debugDumpGeminiStores()));
+    actions.appendChild(mkBtn("Export Legacy Data", () => debugExportLegacyData()));
+    actions.appendChild(mkBtn("Export All Storage", () => debugExportAllStorage()));
+    actions.appendChild(mkBtn("Export Logs", () => debugExportLogs()));
+    actions.appendChild(mkBtn("Clear Logs", () => Logger.clear()));
+    const logList = document.createElement("div");
+    logList.className = "debug-log-list";
+    const renderLogs = () => {
+      logList.replaceChildren();
+      let entries = (0, import_debug_logger.filterLogs)(Logger.getEntries(), { level: activeFilter, term: searchTerm }).slice(-120);
+      if (entries.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "debug-log-item";
+        empty.textContent = "No logs yet.";
+        logList.appendChild(empty);
+        return;
+      }
+      entries.forEach((e) => {
+        const item = document.createElement("div");
+        item.className = "debug-log-item";
+        const meta = `${e.ts}`;
+        const lvl = document.createElement("span");
+        lvl.className = `debug-level ${e.level}`;
+        lvl.textContent = `[${e.level.toUpperCase()}]`;
+        const data = e.data ? ` ${JSON.stringify(e.data)}` : "";
+        item.textContent = `${meta} `;
+        item.appendChild(lvl);
+        item.appendChild(document.createTextNode(` ${e.msg}${data}`));
+        logList.appendChild(item);
+      });
+    };
+    renderLogs();
+    unsubscribe = Logger.subscribe(renderLogs);
+    body.appendChild(info);
+    body.appendChild(filterRow);
+    body.appendChild(search);
+    body.appendChild(actions);
+    body.appendChild(logList);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+  function openCalibrationModal() {
+    const MODAL_ID = "gemini-calibrate-modal";
+    if (document.getElementById(MODAL_ID)) return;
+    const PanelUI2 = this;
+    const cm = CounterModule;
+    const todayKey = Core.getDayKey(cm.resetHour);
+    const overlay = document.createElement("div");
+    overlay.id = MODAL_ID;
+    overlay.className = "settings-overlay";
+    const escHandler = (e) => {
+      if (e.key === "Escape") closeOverlay();
+    };
+    document.addEventListener("keydown", escHandler);
+    const closeOverlay = () => {
+      document.removeEventListener("keydown", escHandler);
+      overlay.remove();
+    };
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeOverlay();
+    };
+    const modal = document.createElement("div");
+    modal.className = "settings-modal";
+    Core.applyTheme(modal, getCurrentTheme());
+    const header = document.createElement("div");
+    header.className = "settings-header";
+    const title = document.createElement("h3");
+    title.textContent = "Calibrate Data";
+    const closeBtn = document.createElement("span");
+    closeBtn.className = "settings-close";
+    closeBtn.appendChild(createIcon("x", 16));
+    closeBtn.onclick = () => closeOverlay();
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    const body = document.createElement("div");
+    body.className = "settings-body";
+    const mkField = (label, value) => {
+      const row = document.createElement("div");
+      row.className = "settings-row";
+      const lbl = document.createElement("span");
+      lbl.className = "settings-label";
+      lbl.textContent = label;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.value = value;
+      input.className = "settings-select";
+      input.style.width = "80px";
+      input.style.textAlign = "center";
+      row.appendChild(lbl);
+      row.appendChild(input);
+      return { row, input };
+    };
+    const section = document.createElement("div");
+    section.className = "settings-section";
+    const sTitle = document.createElement("div");
+    sTitle.className = "settings-section-title";
+    sTitle.textContent = "Adjust Values";
+    section.appendChild(sTitle);
+    const todayField = mkField("Today Messages", cm.state.dailyCounts[todayKey]?.messages || 0);
+    const totalField = mkField("Lifetime Total", cm.state.total);
+    const chatsField = mkField("Chats Created", cm.state.totalChatsCreated);
+    section.appendChild(todayField.row);
+    section.appendChild(totalField.row);
+    section.appendChild(chatsField.row);
+    body.appendChild(section);
+    let chatField = null;
+    const currentCid = Core.getChatId();
+    if (currentCid) {
+      const chatSection = document.createElement("div");
+      chatSection.className = "settings-section";
+      const chatTitle = document.createElement("div");
+      chatTitle.className = "settings-section-title";
+      chatTitle.textContent = "Current Chat";
+      chatSection.appendChild(chatTitle);
+      chatField = mkField("Chat Messages", cm.state.chats[currentCid] || 0);
+      chatSection.appendChild(chatField.row);
+      const chatIdHint = document.createElement("div");
+      chatIdHint.style.cssText = "font-size: 9px; color: var(--text-sub); opacity: 0.5; margin-top: 2px;";
+      chatIdHint.textContent = "ID: " + currentCid.slice(0, 12) + "...";
+      chatSection.appendChild(chatIdHint);
+      body.appendChild(chatSection);
+    }
+    const applyBtn = document.createElement("button");
+    applyBtn.className = "settings-btn";
+    applyBtn.textContent = "Apply Calibration";
+    applyBtn.style.marginTop = "12px";
+    applyBtn.style.background = "rgba(138, 180, 248, 0.2)";
+    applyBtn.style.color = "var(--accent, #8ab4f8)";
+    applyBtn.style.fontWeight = "500";
+    applyBtn.onclick = () => {
+      const newToday = parseInt(todayField.input.value, 10) || 0;
+      const newTotal = parseInt(totalField.input.value, 10) || 0;
+      const newChats = parseInt(chatsField.input.value, 10) || 0;
+      cm.ensureTodayEntry();
+      cm.state.dailyCounts[todayKey].messages = newToday;
+      cm.state.total = newTotal;
+      cm.state.totalChatsCreated = newChats;
+      if (chatField && currentCid) {
+        const newChatVal = parseInt(chatField.input.value, 10) || 0;
+        cm.state.chats[currentCid] = newChatVal;
+      }
+      cm.saveData();
+      PanelUI2.update();
+      if (cm.state.isExpanded) PanelUI2.renderDetailsPane();
+      Logger.info("Data calibrated", {
+        today: newToday,
+        total: newTotal,
+        chats: newChats,
+        chatId: currentCid || null
+      });
+      closeOverlay();
+    };
+    body.appendChild(applyBtn);
+    const note = document.createElement("div");
+    note.className = "settings-version";
+    note.textContent = "Manually adjust counter values";
+    body.appendChild(note);
+    modal.appendChild(header);
+    modal.appendChild(body);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+  var init_panel_settings = __esm({
+    "src/panel_settings.js"() {
+      init_constants();
+      init_icons();
+      init_guided_tour();
+      init_logger();
+      init_core();
+      init_module_registry();
+      init_state();
+      init_counter();
+      init_export();
+      init_debug_utils();
+      init_panel_ui();
+    }
+  });
+
+  // src/panel_dashboard.js
+  function openDashboard() {
+    const exist = document.getElementById("gemini-dashboard-overlay");
+    if (exist) return;
+    const cm = CounterModule;
+    const overlay = document.createElement("div");
+    overlay.id = "gemini-dashboard-overlay";
+    overlay.className = "dash-overlay";
+    const closeDash = () => {
+      document.removeEventListener("keydown", escHandler);
+      const tip = document.getElementById("g-heatmap-tooltip");
+      if (tip) tip.remove();
+      overlay.remove();
+    };
+    const escHandler = (e) => {
+      if (e.key === "Escape") closeDash();
+    };
+    document.addEventListener("keydown", escHandler);
+    overlay.onclick = (e) => {
+      if (e.target === overlay) closeDash();
+    };
+    const modal = document.createElement("div");
+    modal.className = "dash-modal";
+    Core.applyTheme(modal, getCurrentTheme());
+    const header = document.createElement("div");
+    header.className = "dash-header";
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "dash-title";
+    titleDiv.textContent = "";
+    titleDiv.appendChild(createIcon("chart", 20));
+    titleDiv.appendChild(document.createTextNode(" Analytics "));
+    const userSpan = document.createElement("span");
+    userSpan.style.fontSize = "12px";
+    userSpan.style.opacity = "0.5";
+    userSpan.style.marginTop = "8px";
+    userSpan.textContent = Core.getCurrentUser().split("@")[0];
+    titleDiv.appendChild(userSpan);
+    const close = document.createElement("div");
+    close.className = "dash-close";
+    close.appendChild(createIcon("x", 22));
+    close.onclick = () => closeDash();
+    header.appendChild(titleDiv);
+    header.appendChild(close);
+    modal.appendChild(header);
+    const content = document.createElement("div");
+    content.className = "dash-content";
+    const streaks = cm.calculateStreaks();
+    const grid = document.createElement("div");
+    grid.className = "metric-grid";
+    const metrics = [
+      { label: "Total Messages", val: cm.state.total.toLocaleString() },
+      { label: "Chats Created", val: cm.state.totalChatsCreated.toLocaleString() },
+      { label: "Current Streak", val: streaks.current + " Days" },
+      { label: "Best Streak", val: streaks.best + " Days" }
+    ];
+    metrics.forEach((m) => {
+      const card = document.createElement("div");
+      card.className = "metric-card";
+      const valDiv = document.createElement("div");
+      valDiv.className = "metric-val";
+      valDiv.textContent = m.val;
+      const labelDiv = document.createElement("div");
+      labelDiv.className = "metric-label";
+      labelDiv.textContent = m.label;
+      card.appendChild(valDiv);
+      card.appendChild(labelDiv);
+      grid.appendChild(card);
+    });
+    content.appendChild(grid);
+    const hmContainer = document.createElement("div");
+    hmContainer.className = "heatmap-container";
+    const hmHeader = document.createElement("div");
+    hmHeader.className = "heatmap-title";
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = "Activity (Last 365 Days)";
+    const legend = document.createElement("div");
+    legend.className = "heatmap-legend";
+    legend.appendChild(document.createTextNode("Less "));
+    ["l-0", "l-1", "l-3", "l-4"].forEach((cls) => {
+      const item = document.createElement("div");
+      item.className = `legend-item ${cls}`;
+      legend.appendChild(item);
+    });
+    legend.appendChild(document.createTextNode(" More"));
+    hmHeader.appendChild(titleSpan);
+    hmHeader.appendChild(legend);
+    hmContainer.appendChild(hmHeader);
+    const hmWrapper = document.createElement("div");
+    hmWrapper.className = "heatmap-wrapper";
+    const weekCol = document.createElement("div");
+    weekCol.className = "heatmap-week-labels";
+    ["", "Mon", "", "Wed", "", "Fri", ""].forEach((d) => {
+      const label = document.createElement("div");
+      label.className = "week-label";
+      label.textContent = d;
+      weekCol.appendChild(label);
+    });
+    hmWrapper.appendChild(weekCol);
+    const hmMain = document.createElement("div");
+    hmMain.className = "heatmap-main";
+    const monthRow = document.createElement("div");
+    monthRow.className = "heatmap-months";
+    const hmGrid = document.createElement("div");
+    hmGrid.className = "heatmap-grid";
+    const today = /* @__PURE__ */ new Date();
+    const oneYearAgo = /* @__PURE__ */ new Date();
+    oneYearAgo.setDate(today.getDate() - 365);
+    let maxVal = 0;
+    Object.values(cm.state.dailyCounts).forEach((v) => {
+      if (v.messages > maxVal) maxVal = v.messages;
+    });
+    if (maxVal < 10) maxVal = 10;
+    let tooltip = document.getElementById("g-heatmap-tooltip");
+    if (!tooltip) {
+      tooltip = document.createElement("div");
+      tooltip.id = "g-heatmap-tooltip";
+      tooltip.className = "g-tooltip";
+      document.body.appendChild(tooltip);
+    }
+    let iterDate = new Date(oneYearAgo);
+    iterDate.setDate(iterDate.getDate() - iterDate.getDay());
+    let lastMonth = -1;
+    for (let week = 0; week < 53; week++) {
+      const currentMonth = iterDate.getMonth();
+      const mLabel = document.createElement("div");
+      mLabel.className = "month-label";
+      if (currentMonth !== lastMonth) {
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        mLabel.textContent = monthNames[currentMonth];
+        lastMonth = currentMonth;
+      }
+      monthRow.appendChild(mLabel);
+      const col = document.createElement("div");
+      col.className = "heatmap-col";
+      for (let day = 0; day < 7; day++) {
+        const key = (0, import_date_utils.formatLocalDate)(iterDate);
+        const count = cm.state.dailyCounts[key]?.messages || 0;
+        const cell = document.createElement("div");
+        cell.className = "heatmap-cell";
+        let level = "l-0";
+        if (count > 0) {
+          const ratio = count / maxVal;
+          if (ratio > 0.75) level = "l-4";
+          else if (ratio > 0.5) level = "l-3";
+          else if (ratio > 0.25) level = "l-2";
+          else level = "l-1";
+        }
+        cell.classList.add(level);
+        cell.onmouseenter = (e) => {
+          tooltip.textContent = "";
+          const b = document.createElement("div");
+          b.style.fontWeight = "bold";
+          b.textContent = key;
+          const sp = document.createElement("div");
+          sp.textContent = `${count} messages`;
+          tooltip.appendChild(b);
+          tooltip.appendChild(sp);
+          tooltip.classList.add("visible");
+          const rect = cell.getBoundingClientRect();
+          let left = rect.left + rect.width / 2;
+          let top = rect.top;
+          tooltip.style.left = left + "px";
+          tooltip.style.top = top + "px";
+          const ttRect = tooltip.getBoundingClientRect();
+          if (ttRect.right > window.innerWidth) tooltip.style.left = window.innerWidth - ttRect.width / 2 - 10 + "px";
+          if (ttRect.left < 0) tooltip.style.left = ttRect.width / 2 + 10 + "px";
+          if (ttRect.top < 0) tooltip.style.top = rect.bottom + 10 + "px";
+          if (ttRect.bottom > window.innerHeight) tooltip.style.top = rect.top - ttRect.height - 10 + "px";
+        };
+        cell.onmouseleave = () => tooltip.classList.remove("visible");
+        col.appendChild(cell);
+        iterDate.setDate(iterDate.getDate() + 1);
+        if (iterDate > today && day === today.getDay()) break;
+      }
+      hmGrid.appendChild(col);
+      if (iterDate > today) break;
+    }
+    hmMain.appendChild(monthRow);
+    hmMain.appendChild(hmGrid);
+    hmWrapper.appendChild(hmMain);
+    hmContainer.appendChild(hmWrapper);
+    content.appendChild(hmContainer);
+    const allByModel = { flash: 0, thinking: 0, pro: 0 };
+    Object.values(cm.state.dailyCounts).forEach((entry) => {
+      if (entry.byModel) {
+        allByModel.flash += entry.byModel.flash || 0;
+        allByModel.thinking += entry.byModel.thinking || 0;
+        allByModel.pro += entry.byModel.pro || 0;
+      }
+    });
+    const modelTotal = allByModel.flash + allByModel.thinking + allByModel.pro;
+    if (modelTotal > 0) {
+      const modelContainer = document.createElement("div");
+      modelContainer.className = "heatmap-container";
+      const modelTitle = document.createElement("div");
+      modelTitle.className = "heatmap-title";
+      const modelTitleSpan = document.createElement("span");
+      modelTitleSpan.textContent = "Model Usage Distribution";
+      modelTitle.appendChild(modelTitleSpan);
+      modelContainer.appendChild(modelTitle);
+      const modelColors = { flash: CounterModule.MODEL_CONFIG.flash.color, thinking: CounterModule.MODEL_CONFIG.thinking.color, pro: CounterModule.MODEL_CONFIG.pro.color };
+      const models = [
+        { key: "flash", label: "3 Flash", count: allByModel.flash },
+        { key: "thinking", label: "3 Flash Thinking", count: allByModel.thinking },
+        { key: "pro", label: "3 Pro", count: allByModel.pro }
+      ];
+      models.forEach((m) => {
+        const pct = (m.count / modelTotal * 100).toFixed(1);
+        const barRow = document.createElement("div");
+        barRow.style.cssText = "display: flex; align-items: center; gap: 8px; margin-bottom: 8px;";
+        const labelEl = document.createElement("div");
+        labelEl.style.cssText = "font-size: 11px; color: var(--text-sub); width: 110px; flex-shrink: 0;";
+        labelEl.textContent = m.label;
+        const barBg = document.createElement("div");
+        barBg.style.cssText = "flex: 1; height: 16px; background: var(--btn-bg, rgba(255,255,255,0.05)); border-radius: 4px; overflow: hidden;";
+        const barFill = document.createElement("div");
+        barFill.style.cssText = `height: 100%; width: ${pct}%; background: ${modelColors[m.key]}; border-radius: 4px; transition: width 0.4s;`;
+        barBg.appendChild(barFill);
+        const valEl = document.createElement("div");
+        valEl.style.cssText = "font-size: 11px; color: var(--text-main); width: 70px; text-align: right; flex-shrink: 0; font-family: monospace;";
+        valEl.textContent = `${m.count} (${pct}%)`;
+        barRow.appendChild(labelEl);
+        barRow.appendChild(barBg);
+        barRow.appendChild(valEl);
+        modelContainer.appendChild(barRow);
+      });
+      const weightedTotal = Object.keys(allByModel).reduce((sum, k) => sum + (allByModel[k] || 0) * (CounterModule.MODEL_CONFIG[k]?.multiplier ?? 1), 0);
+      const wStr = weightedTotal % 1 === 0 ? String(weightedTotal) : weightedTotal.toFixed(1);
+      const weightedRow = document.createElement("div");
+      weightedRow.style.cssText = "font-size: 11px; color: var(--text-sub); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider, rgba(255,255,255,0.05));";
+      weightedRow.textContent = `Total Weighted: ${wStr} | Raw Messages: ${modelTotal}`;
+      modelContainer.appendChild(weightedRow);
+      content.appendChild(modelContainer);
+    }
+    modal.appendChild(content);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+      hmContainer.scrollLeft = hmContainer.scrollWidth;
+    }, 0);
+  }
+  var import_date_utils;
+  var init_panel_dashboard = __esm({
+    "src/panel_dashboard.js"() {
+      init_icons();
+      init_core();
+      init_state();
+      init_counter();
+      import_date_utils = __toESM(require_date_utils());
+    }
+  });
+
   // src/panel_ui.js
   function setIconText(el, iconName, text, iconSize = 14) {
     el.textContent = "";
@@ -1873,19 +2944,18 @@
     span.textContent = mod.icon;
     return span;
   }
-  var MODULE_ICON_MAP, PanelUI;
+  var import_date_utils2, MODULE_ICON_MAP, PanelUI;
   var init_panel_ui = __esm({
     "src/panel_ui.js"() {
       init_constants();
+      import_date_utils2 = __toESM(require_date_utils());
       init_icons();
-      init_guided_tour();
-      init_logger();
       init_core();
       init_module_registry();
       init_state();
       init_counter();
-      init_export();
-      init_debug_utils();
+      init_panel_settings();
+      init_panel_dashboard();
       MODULE_ICON_MAP = {
         "counter": "chart",
         "export": "upload",
@@ -2431,11 +3501,11 @@
             console.error("Panel init error", e);
           }
         },
-        // --- 详情面板渲染 ---
+        // --- 详情面板渲染 (optimized: separate tab bar from content) ---
+        _prevTabIds: null,
         renderDetailsPane() {
           const pane = document.getElementById("g-details-pane");
           if (!pane) return;
-          pane.replaceChildren();
           const tabs = [{ id: "stats", iconName: "chart" }];
           Object.keys(ModuleRegistry.modules).forEach((id) => {
             const mod = ModuleRegistry.modules[id];
@@ -2444,33 +3514,55 @@
             }
           });
           if (!tabs.find((t) => t.id === this._activeTab)) this._activeTab = "stats";
-          if (tabs.length > 1) {
-            const tabBar = document.createElement("div");
-            tabBar.className = "details-tab-bar";
-            tabs.forEach((t) => {
-              const tab = document.createElement("div");
-              tab.className = `details-tab ${t.id === this._activeTab ? "active" : ""}`;
-              if (t.iconName) {
-                tab.appendChild(createIcon(t.iconName, 14));
-              } else {
-                tab.textContent = t.icon;
-              }
-              tab.title = t.id;
-              tab.onclick = (e) => {
-                e.stopPropagation();
-                this._activeTab = t.id;
-                this.renderDetailsPane();
-              };
-              tabBar.appendChild(tab);
+          const tabIds = tabs.map((t) => t.id).join(",");
+          const tabBarChanged = tabIds !== this._prevTabIds;
+          if (tabBarChanged) {
+            pane.replaceChildren();
+            this._prevTabIds = tabIds;
+            if (tabs.length > 1) {
+              const tabBar = document.createElement("div");
+              tabBar.id = "g-details-tab-bar";
+              tabBar.className = "details-tab-bar";
+              tabs.forEach((t) => {
+                const tab = document.createElement("div");
+                tab.className = `details-tab ${t.id === this._activeTab ? "active" : ""}`;
+                tab.dataset.tabId = t.id;
+                if (t.iconName) {
+                  tab.appendChild(createIcon(t.iconName, 14));
+                } else {
+                  tab.textContent = t.icon;
+                }
+                tab.title = t.id;
+                tab.onclick = (e) => {
+                  e.stopPropagation();
+                  this._activeTab = t.id;
+                  this._switchTabContent(pane, tabs);
+                };
+                tabBar.appendChild(tab);
+              });
+              pane.appendChild(tabBar);
+            }
+            const content = document.createElement("div");
+            content.id = "g-details-content";
+            pane.appendChild(content);
+          }
+          this._switchTabContent(pane, tabs);
+        },
+        _switchTabContent(pane, tabs) {
+          const content = document.getElementById("g-details-content") || pane;
+          content.replaceChildren();
+          const tabBar = document.getElementById("g-details-tab-bar");
+          if (tabBar) {
+            tabBar.querySelectorAll(".details-tab").forEach((tab) => {
+              tab.classList.toggle("active", tab.dataset.tabId === this._activeTab);
             });
-            pane.appendChild(tabBar);
           }
           if (this._activeTab === "stats") {
-            this._renderStatsTab(pane);
+            this._renderStatsTab(content);
           } else {
             const mod = ModuleRegistry.modules[this._activeTab];
             if (mod && typeof mod.renderToDetailsPane === "function") {
-              mod.renderToDetailsPane(pane);
+              mod.renderToDetailsPane(content);
             }
           }
         },
@@ -2614,7 +3706,8 @@
           };
           return row;
         },
-        // --- UI 更新 ---
+        // --- UI 更新 (with dirty-checking) ---
+        _prev: {},
         update() {
           const cm = CounterModule;
           const user = Core.getCurrentUser();
@@ -2627,41 +3720,11 @@
           const quotaFill = document.getElementById("g-quota-fill");
           const quotaLabel = document.getElementById("g-quota-label");
           if (!bigDisplay) return;
+          const p = this._prev;
           const isMe = inspecting === user;
           const displayName = inspecting === TEMP_USER ? "Guest" : inspecting.split("@")[0];
-          capsule.replaceChildren();
-          const dot = document.createElement("div");
-          dot.className = "user-avatar-dot";
-          const name = document.createElement("span");
-          name.textContent = displayName;
-          name.style.overflow = "hidden";
-          name.style.textOverflow = "ellipsis";
-          name.style.whiteSpace = "nowrap";
-          capsule.appendChild(dot);
-          capsule.appendChild(name);
-          if (cm.accountType && cm.accountType !== "free") {
-            const acctBadgeInline = document.createElement("span");
-            acctBadgeInline.className = "acct-badge-inline";
-            acctBadgeInline.dataset.tier = cm.accountType;
-            const acctLabels = { free: "Free", pro: "Pro", ultra: "Ultra" };
-            acctBadgeInline.textContent = acctLabels[cm.accountType] || "Free";
-            acctBadgeInline.title = "Account Tier";
-            capsule.appendChild(acctBadgeInline);
-          }
-          if (!isMe) {
-            capsule.classList.add("viewing-other");
-            capsule.title = "Viewing other user (Read Only)";
-          } else {
-            capsule.classList.remove("viewing-other");
-            capsule.title = "Active User";
-          }
-          if (modelBadge) {
-            const mc = cm.MODEL_CONFIG[cm.currentModel];
-            if (!mc) return;
-            modelBadge.textContent = mc.label;
-            modelBadge.style.background = mc.color;
-            modelBadge.style.color = cm.currentModel === "flash" ? "#000" : "#fff";
-          }
+          const accountType = cm.accountType || "free";
+          const modelKey = cm.currentModel;
           let val = 0, sub = "", btn = "Reset";
           let disableBtn = !isMe;
           if (cm.state.viewMode === "today") {
@@ -2692,39 +3755,89 @@
             sub = "Lifetime History";
             btn = "Clear History";
           }
-          const numericVal = typeof val === "number" ? val : -1;
-          if (numericVal !== cm.lastDisplayedVal && cm.lastDisplayedVal !== -1 && numericVal > cm.lastDisplayedVal) {
-            bigDisplay.classList.remove("bump");
-            void bigDisplay.offsetWidth;
-            bigDisplay.classList.add("bump");
-          }
-          cm.lastDisplayedVal = numericVal;
-          bigDisplay.textContent = val;
-          subInfo.textContent = sub;
-          if (quotaFill && quotaLabel) {
-            const used = cm.getTodayMessages();
-            const weighted = cm.getWeightedQuota();
-            const pct = Math.min(weighted / cm.quotaLimit * 100, 100);
-            quotaFill.style.width = pct + "%";
-            if (pct < 60) quotaFill.style.background = QUOTA_COLORS.safe;
-            else if (pct < 85) quotaFill.style.background = QUOTA_COLORS.warn;
-            else quotaFill.style.background = QUOTA_COLORS.danger;
-            const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
-            quotaLabel.textContent = `${used} msgs (${weightedStr} weighted) / ${cm.quotaLimit}`;
-          }
-          if (disableBtn) {
-            actionBtn.textContent = "View Only";
-            actionBtn.className = "g-btn disabled";
-            actionBtn.disabled = true;
-          } else {
-            actionBtn.disabled = false;
-            if (cm.state.resetStep === 0) {
-              actionBtn.textContent = btn;
-              actionBtn.className = "g-btn";
-            } else {
-              actionBtn.textContent = cm.state.resetStep === 1 ? "Sure?" : "Really?";
-              actionBtn.className = `g-btn danger-${cm.state.resetStep}`;
+          const used = cm.getTodayMessages();
+          const weighted = cm.getWeightedQuota();
+          const quotaPct = cm.quotaLimit > 0 ? Math.min(weighted / cm.quotaLimit * 100, 100) : 0;
+          const quotaColor = quotaPct < 60 ? QUOTA_COLORS.safe : quotaPct < 85 ? QUOTA_COLORS.warn : QUOTA_COLORS.danger;
+          const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
+          const quotaText = `${used} msgs (${weightedStr} weighted) / ${cm.quotaLimit}`;
+          const resetStep = cm.state.resetStep;
+          if (p.displayName !== displayName || p.isMe !== isMe || p.accountType !== accountType) {
+            capsule.replaceChildren();
+            const dot = document.createElement("div");
+            dot.className = "user-avatar-dot";
+            const name = document.createElement("span");
+            name.textContent = displayName;
+            name.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;";
+            capsule.appendChild(dot);
+            capsule.appendChild(name);
+            if (accountType !== "free") {
+              const badge = document.createElement("span");
+              badge.className = "acct-badge-inline";
+              badge.dataset.tier = accountType;
+              badge.textContent = accountType === "ultra" ? "Ultra" : "Pro";
+              badge.title = "Account Tier";
+              capsule.appendChild(badge);
             }
+            capsule.classList.toggle("viewing-other", !isMe);
+            capsule.title = isMe ? "Active User" : "Viewing other user (Read Only)";
+            p.displayName = displayName;
+            p.isMe = isMe;
+            p.accountType = accountType;
+          }
+          if (p.modelKey !== modelKey && modelBadge) {
+            const mc = cm.MODEL_CONFIG[modelKey];
+            if (!mc) return;
+            modelBadge.textContent = mc.label;
+            modelBadge.style.background = mc.color;
+            modelBadge.style.color = modelKey === "flash" ? "#000" : "#fff";
+            p.modelKey = modelKey;
+          }
+          if (p.val !== val) {
+            const numericVal = typeof val === "number" ? val : -1;
+            if (numericVal !== cm.lastDisplayedVal && cm.lastDisplayedVal !== -1 && numericVal > cm.lastDisplayedVal) {
+              bigDisplay.classList.remove("bump");
+              void bigDisplay.offsetWidth;
+              bigDisplay.classList.add("bump");
+            }
+            cm.lastDisplayedVal = numericVal;
+            bigDisplay.textContent = val;
+            p.val = val;
+          }
+          if (p.sub !== sub) {
+            subInfo.textContent = sub;
+            p.sub = sub;
+          }
+          if (quotaFill && quotaLabel) {
+            if (p.quotaPct !== quotaPct || p.quotaColor !== quotaColor) {
+              quotaFill.style.width = quotaPct + "%";
+              quotaFill.style.background = quotaColor;
+              p.quotaPct = quotaPct;
+              p.quotaColor = quotaColor;
+            }
+            if (p.quotaText !== quotaText) {
+              quotaLabel.textContent = quotaText;
+              p.quotaText = quotaText;
+            }
+          }
+          if (p.btn !== btn || p.disableBtn !== disableBtn || p.resetStep !== resetStep) {
+            if (disableBtn) {
+              actionBtn.textContent = "View Only";
+              actionBtn.className = "g-btn disabled";
+              actionBtn.disabled = true;
+            } else {
+              actionBtn.disabled = false;
+              if (resetStep === 0) {
+                actionBtn.textContent = btn;
+                actionBtn.className = "g-btn";
+              } else {
+                actionBtn.textContent = resetStep === 1 ? "Sure?" : "Really?";
+                actionBtn.className = `g-btn danger-${resetStep}`;
+              }
+            }
+            p.btn = btn;
+            p.disableBtn = disableBtn;
+            p.resetStep = resetStep;
           }
         },
         toggleDetails() {
@@ -2811,969 +3924,12 @@
           this._dragMove = null;
           this._dragUp = null;
         },
-        // --- Settings Modal ---
-        openSettingsModal() {
-          const SETTINGS_MODAL_ID = "gemini-settings-modal";
-          if (document.getElementById(SETTINGS_MODAL_ID)) return;
-          const overlay = document.createElement("div");
-          overlay.id = SETTINGS_MODAL_ID;
-          overlay.className = "settings-overlay";
-          const escHandler = (e) => {
-            if (e.key === "Escape") closeOverlay();
-          };
-          document.addEventListener("keydown", escHandler);
-          const closeOverlay = () => {
-            document.removeEventListener("keydown", escHandler);
-            overlay.remove();
-          };
-          overlay.onclick = (e) => {
-            if (e.target === overlay) closeOverlay();
-          };
-          const modal = document.createElement("div");
-          modal.className = "settings-modal";
-          Core.applyTheme(modal, getCurrentTheme());
-          const header = document.createElement("div");
-          header.className = "settings-header";
-          const title = document.createElement("h3");
-          setIconText(title, "settings", "Settings");
-          const closeBtn = document.createElement("span");
-          closeBtn.className = "settings-close";
-          closeBtn.appendChild(createIcon("x", 16));
-          closeBtn.onclick = () => closeOverlay();
-          header.appendChild(title);
-          header.appendChild(closeBtn);
-          const body = document.createElement("div");
-          body.className = "settings-body";
-          const extSection = document.createElement("div");
-          extSection.className = "settings-section";
-          const extTitle = document.createElement("div");
-          extTitle.className = "settings-section-title";
-          extTitle.textContent = "";
-          setIconText(extTitle, "package", "Feature Extensions");
-          extSection.appendChild(extTitle);
-          ModuleRegistry.getAll().forEach((mod) => {
-            const row = document.createElement("div");
-            row.className = "module-toggle-compact";
-            row.title = mod.description;
-            const label = document.createElement("div");
-            label.className = "module-compact-label";
-            const icon = document.createElement("span");
-            icon.className = "module-icon";
-            icon.appendChild(renderModIcon(mod, 16));
-            const name = document.createElement("span");
-            name.textContent = mod.name;
-            label.appendChild(icon);
-            label.appendChild(name);
-            const rightSide = document.createElement("div");
-            rightSide.style.cssText = "display:flex;align-items:center;gap:6px;";
-            if (typeof mod.getOnboarding === "function") {
-              const infoBtn = document.createElement("span");
-              infoBtn.className = "onboarding-info-btn";
-              infoBtn.appendChild(createIcon("info", 12));
-              infoBtn.title = "Show guide";
-              infoBtn.onclick = (e) => {
-                e.stopPropagation();
-                PanelUI.showOnboarding(mod.id);
-              };
-              rightSide.appendChild(infoBtn);
-            }
-            const toggle = document.createElement("div");
-            toggle.className = `toggle-switch ${ModuleRegistry.isEnabled(mod.id) ? "on" : ""}`;
-            toggle.onclick = () => {
-              ModuleRegistry.toggle(mod.id);
-              toggle.classList.toggle("on");
-              if (CounterModule.state.isExpanded) {
-                PanelUI.renderDetailsPane();
-              }
-            };
-            rightSide.appendChild(toggle);
-            row.appendChild(label);
-            row.appendChild(rightSide);
-            extSection.appendChild(row);
-          });
-          body.appendChild(extSection);
-          ModuleRegistry.getAll().forEach((mod) => {
-            if (ModuleRegistry.isEnabled(mod.id) && typeof mod.renderToSettings === "function") {
-              const modSection = document.createElement("div");
-              modSection.className = "settings-section";
-              const modTitle = document.createElement("div");
-              modTitle.className = "settings-section-title";
-              modTitle.textContent = "";
-              modTitle.appendChild(renderModIcon(mod, 12));
-              modTitle.appendChild(document.createTextNode(" " + mod.name + " Settings"));
-              modSection.appendChild(modTitle);
-              mod.renderToSettings(modSection);
-              body.appendChild(modSection);
-            }
-          });
-          const cm = CounterModule;
-          const resetSection = document.createElement("div");
-          resetSection.className = "settings-section";
-          const resetTitle = document.createElement("div");
-          resetTitle.className = "settings-section-title";
-          resetTitle.textContent = "Daily Reset";
-          resetSection.appendChild(resetTitle);
-          const resetRow = document.createElement("div");
-          resetRow.className = "settings-row";
-          const resetLabel = document.createElement("span");
-          resetLabel.className = "settings-label";
-          resetLabel.textContent = "Reset Hour";
-          const resetSelect = document.createElement("select");
-          resetSelect.className = "settings-select";
-          for (let h = 0; h < 24; h++) {
-            const opt = document.createElement("option");
-            opt.value = h;
-            opt.textContent = `${h.toString().padStart(2, "0")}:00`;
-            if (h === cm.resetHour) opt.selected = true;
-            resetSelect.appendChild(opt);
-          }
-          resetSelect.onchange = () => {
-            cm.resetHour = parseInt(resetSelect.value, 10);
-            try {
-              GM_setValue(GLOBAL_KEYS.RESET_HOUR, cm.resetHour);
-            } catch {
-            }
-            this.update();
-          };
-          resetRow.appendChild(resetLabel);
-          resetRow.appendChild(resetSelect);
-          resetSection.appendChild(resetRow);
-          body.appendChild(resetSection);
-          const quotaSection = document.createElement("div");
-          quotaSection.className = "settings-section";
-          const quotaTitle = document.createElement("div");
-          quotaTitle.className = "settings-section-title";
-          quotaTitle.textContent = "Daily Quota";
-          quotaSection.appendChild(quotaTitle);
-          const quotaRow = document.createElement("div");
-          quotaRow.className = "settings-row";
-          const quotaLabelEl = document.createElement("span");
-          quotaLabelEl.className = "settings-label";
-          quotaLabelEl.textContent = "Message Limit";
-          const quotaInput = document.createElement("input");
-          quotaInput.type = "number";
-          quotaInput.min = "1";
-          quotaInput.max = "999";
-          quotaInput.value = cm.quotaLimit;
-          quotaInput.className = "settings-select";
-          quotaInput.style.width = "60px";
-          quotaInput.style.textAlign = "center";
-          quotaInput.onchange = () => {
-            const v = parseInt(quotaInput.value, 10);
-            if (v > 0 && v <= 999) {
-              cm.quotaLimit = v;
-              try {
-                GM_setValue(GLOBAL_KEYS.QUOTA, v);
-              } catch {
-              }
-              this.update();
-            }
-          };
-          quotaRow.appendChild(quotaLabelEl);
-          quotaRow.appendChild(quotaInput);
-          quotaSection.appendChild(quotaRow);
-          body.appendChild(quotaSection);
-          const chartSection = document.createElement("div");
-          chartSection.className = "settings-section";
-          const chartTitle = document.createElement("div");
-          chartTitle.className = "settings-section-title";
-          chartTitle.textContent = "Usage History (Last 7 Days)";
-          chartSection.appendChild(chartTitle);
-          const chartContainer = document.createElement("div");
-          chartContainer.style.cssText = "background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; margin-top: 4px;";
-          const data = cm.getLast7DaysData();
-          const svgWidth = 268, svgHeight = 80, padding = 20;
-          const maxVal = Math.max(...data.map((d) => d.messages), 1);
-          const points = data.map((d, i) => ({
-            x: padding + i * ((svgWidth - 2 * padding) / 6),
-            y: svgHeight - padding - d.messages / maxVal * (svgHeight - 2 * padding),
-            val: d.messages,
-            label: d.label
-          }));
-          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-          svg.setAttribute("width", svgWidth);
-          svg.setAttribute("height", svgHeight + 20);
-          svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight + 20}`);
-          const areaPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          const areaD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + ` L ${points[6].x} ${svgHeight - padding} L ${points[0].x} ${svgHeight - padding} Z`;
-          areaPath.setAttribute("d", areaD);
-          areaPath.setAttribute("fill", "rgba(138, 180, 248, 0.2)");
-          svg.appendChild(areaPath);
-          const linePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-          linePath.setAttribute("d", lineD);
-          linePath.setAttribute("fill", "none");
-          linePath.setAttribute("stroke", "var(--accent, #8ab4f8)");
-          linePath.setAttribute("stroke-width", "2");
-          linePath.setAttribute("stroke-linecap", "round");
-          linePath.setAttribute("stroke-linejoin", "round");
-          svg.appendChild(linePath);
-          points.forEach((p) => {
-            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            circle.setAttribute("cx", p.x);
-            circle.setAttribute("cy", p.y);
-            circle.setAttribute("r", "3");
-            circle.setAttribute("fill", "var(--accent, #8ab4f8)");
-            svg.appendChild(circle);
-            if (p.val > 0) {
-              const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-              valText.setAttribute("x", p.x);
-              valText.setAttribute("y", p.y - 6);
-              valText.setAttribute("text-anchor", "middle");
-              valText.setAttribute("font-size", "8");
-              valText.setAttribute("fill", "var(--text-sub, #9aa0a6)");
-              valText.textContent = p.val;
-              svg.appendChild(valText);
-            }
-            const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            dateText.setAttribute("x", p.x);
-            dateText.setAttribute("y", svgHeight + 10);
-            dateText.setAttribute("text-anchor", "middle");
-            dateText.setAttribute("font-size", "8");
-            dateText.setAttribute("fill", "var(--text-sub, #9aa0a6)");
-            dateText.textContent = p.label;
-            svg.appendChild(dateText);
-          });
-          chartContainer.appendChild(svg);
-          chartSection.appendChild(chartContainer);
-          body.appendChild(chartSection);
-          const dataSection = document.createElement("div");
-          dataSection.className = "settings-section";
-          const dataTitle = document.createElement("div");
-          dataTitle.className = "settings-section-title";
-          dataTitle.textContent = "Data";
-          dataSection.appendChild(dataTitle);
-          if (ModuleRegistry.isEnabled("export")) {
-            ExportModule.renderExportButtons(dataSection);
-          } else {
-            const exportBtn = document.createElement("button");
-            exportBtn.className = "settings-btn";
-            setIconText(exportBtn, "download", "Export Data (JSON)");
-            exportBtn.onclick = () => {
-              const exportData = {
-                total: cm.state.total,
-                totalChatsCreated: cm.state.totalChatsCreated,
-                chats: cm.state.chats,
-                dailyCounts: cm.state.dailyCounts,
-                exportedAt: (/* @__PURE__ */ new Date()).toISOString()
-              };
-              const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              const _d = /* @__PURE__ */ new Date();
-              a.download = `gemini-counter-${Core.getCurrentUser().split("@")[0]}-${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}.json`;
-              a.click();
-              URL.revokeObjectURL(url);
-            };
-            dataSection.appendChild(exportBtn);
-          }
-          const calibrateBtn = document.createElement("button");
-          calibrateBtn.className = "settings-btn";
-          setIconText(calibrateBtn, "wrench", "Calibrate Data");
-          calibrateBtn.onclick = () => this.openCalibrationModal();
-          dataSection.appendChild(calibrateBtn);
-          const resetPosBtn = document.createElement("button");
-          resetPosBtn.className = "settings-btn";
-          setIconText(resetPosBtn, "pin", "Reset Panel Position");
-          resetPosBtn.onclick = () => {
-            try {
-              GM_setValue(GLOBAL_KEYS.POS, DEFAULT_POS);
-            } catch {
-            }
-            closeOverlay();
-            location.reload();
-          };
-          dataSection.appendChild(resetPosBtn);
-          const tourBtn = document.createElement("button");
-          tourBtn.className = "settings-btn";
-          setIconText(tourBtn, "compass", "Guided Tour");
-          tourBtn.onclick = () => {
-            closeOverlay();
-            GuidedTour.start();
-          };
-          dataSection.appendChild(tourBtn);
-          body.appendChild(dataSection);
-          const debugSection = document.createElement("div");
-          debugSection.className = "settings-section";
-          const debugTitle = document.createElement("div");
-          debugTitle.className = "settings-section-title";
-          debugTitle.textContent = "Debug";
-          debugSection.appendChild(debugTitle);
-          const debugToggleRow = document.createElement("div");
-          debugToggleRow.className = "settings-row";
-          const debugLabel = document.createElement("span");
-          debugLabel.className = "settings-label";
-          debugLabel.textContent = "Enable Debug";
-          const debugToggle = document.createElement("div");
-          debugToggle.className = `toggle-switch ${isDebugEnabled() ? "on" : ""}`;
-          debugToggle.onclick = () => {
-            const enabled = !isDebugEnabled();
-            setDebugEnabled(enabled);
-            debugToggle.classList.toggle("on");
-            Logger.info("Debug mode toggled", { enabled });
-          };
-          debugToggleRow.appendChild(debugLabel);
-          debugToggleRow.appendChild(debugToggle);
-          debugSection.appendChild(debugToggleRow);
-          const logLevelRow = document.createElement("div");
-          logLevelRow.className = "settings-row";
-          const logLevelLabel = document.createElement("span");
-          logLevelLabel.className = "settings-label";
-          logLevelLabel.textContent = "Log Level";
-          const logSelect = document.createElement("select");
-          logSelect.className = "settings-select";
-          ["error", "warn", "info", "debug"].forEach((lvl) => {
-            const opt = document.createElement("option");
-            opt.value = lvl;
-            opt.textContent = lvl.toUpperCase();
-            if (lvl === Logger.getLevel()) opt.selected = true;
-            logSelect.appendChild(opt);
-          });
-          logSelect.onchange = () => Logger.setLevel(logSelect.value);
-          logLevelRow.appendChild(logLevelLabel);
-          logLevelRow.appendChild(logSelect);
-          debugSection.appendChild(logLevelRow);
-          const debugPanelBtn = document.createElement("button");
-          debugPanelBtn.className = "settings-btn";
-          setIconText(debugPanelBtn, "bug", "Open Debug Panel");
-          debugPanelBtn.onclick = () => this.openDebugModal();
-          debugSection.appendChild(debugPanelBtn);
-          body.appendChild(debugSection);
-          const version = document.createElement("div");
-          version.className = "settings-version";
-          version.textContent = "Primer++ for Gemini v" + VERSION;
-          body.appendChild(version);
-          modal.appendChild(header);
-          modal.appendChild(body);
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-        },
-        // --- Onboarding Modal ---
-        showOnboarding(moduleId) {
-          const mod = ModuleRegistry.modules[moduleId];
-          if (!mod || typeof mod.getOnboarding !== "function") return;
-          const content = mod.getOnboarding();
-          if (!content) return;
-          let lang;
-          try {
-            lang = GM_getValue(GLOBAL_KEYS.ONBOARDING_LANG, "zh");
-          } catch {
-            lang = "zh";
-          }
-          const MODAL_ID = "gemini-onboarding-modal";
-          const existing = document.getElementById(MODAL_ID);
-          if (existing) existing.remove();
-          const overlay = document.createElement("div");
-          overlay.id = MODAL_ID;
-          overlay.className = "onboarding-overlay";
-          const escHandler = (e) => {
-            if (e.key === "Escape") closeOverlay();
-          };
-          document.addEventListener("keydown", escHandler);
-          const closeOverlay = () => {
-            document.removeEventListener("keydown", escHandler);
-            overlay.remove();
-          };
-          overlay.onclick = (e) => {
-            if (e.target === overlay) closeOverlay();
-          };
-          const modal = document.createElement("div");
-          modal.className = "onboarding-modal";
-          Core.applyTheme(modal, getCurrentTheme());
-          const renderContent = () => {
-            modal.replaceChildren();
-            const t = content[lang] || content.zh || content.en;
-            const header = document.createElement("div");
-            header.className = "onboarding-header";
-            const title = document.createElement("h3");
-            title.textContent = "";
-            title.appendChild(renderModIcon(mod, 16));
-            title.appendChild(document.createTextNode(" " + mod.name));
-            const closeBtn = document.createElement("span");
-            closeBtn.className = "onboarding-close";
-            closeBtn.appendChild(createIcon("x", 16));
-            closeBtn.onclick = () => closeOverlay();
-            header.appendChild(title);
-            header.appendChild(closeBtn);
-            modal.appendChild(header);
-            const body = document.createElement("div");
-            body.className = "onboarding-body";
-            if (t.rant) {
-              const sec1 = document.createElement("div");
-              sec1.className = "onboarding-section";
-              const h1 = document.createElement("div");
-              h1.className = "onboarding-section-title";
-              h1.textContent = "";
-              h1.appendChild(createIcon("info", 14));
-              h1.appendChild(document.createTextNode(lang === "zh" ? " 为什么需要这个？" : " Why does this exist?"));
-              const p1 = document.createElement("div");
-              p1.className = "onboarding-text";
-              p1.textContent = t.rant;
-              sec1.appendChild(h1);
-              sec1.appendChild(p1);
-              body.appendChild(sec1);
-            }
-            if (t.features) {
-              const sec2 = document.createElement("div");
-              sec2.className = "onboarding-section";
-              const h2 = document.createElement("div");
-              h2.className = "onboarding-section-title";
-              h2.textContent = "";
-              h2.appendChild(createIcon("gem", 14));
-              h2.appendChild(document.createTextNode(lang === "zh" ? " 它能做什么？" : " What does it do?"));
-              const p2 = document.createElement("div");
-              p2.className = "onboarding-text";
-              p2.textContent = t.features;
-              sec2.appendChild(h2);
-              sec2.appendChild(p2);
-              body.appendChild(sec2);
-            }
-            if (t.guide) {
-              const sec3 = document.createElement("div");
-              sec3.className = "onboarding-section";
-              const h3el = document.createElement("div");
-              h3el.className = "onboarding-section-title";
-              h3el.textContent = "";
-              h3el.appendChild(createIcon("wrench", 14));
-              h3el.appendChild(document.createTextNode(lang === "zh" ? " 如何使用？" : " How to use?"));
-              const p3 = document.createElement("div");
-              p3.className = "onboarding-text";
-              p3.textContent = t.guide;
-              sec3.appendChild(h3el);
-              sec3.appendChild(p3);
-              body.appendChild(sec3);
-            }
-            modal.appendChild(body);
-            const footer = document.createElement("div");
-            footer.className = "onboarding-footer";
-            const langBtn = document.createElement("button");
-            langBtn.className = "onboarding-lang-btn";
-            langBtn.textContent = "";
-            langBtn.appendChild(createIcon("globe", 12));
-            langBtn.appendChild(document.createTextNode(lang === "zh" ? " EN" : " 中"));
-            langBtn.onclick = () => {
-              lang = lang === "zh" ? "en" : "zh";
-              try {
-                GM_setValue(GLOBAL_KEYS.ONBOARDING_LANG, lang);
-              } catch {
-              }
-              renderContent();
-            };
-            const startBtn = document.createElement("button");
-            startBtn.className = "onboarding-start-btn";
-            startBtn.textContent = lang === "zh" ? "开始使用 →" : "Get Started →";
-            startBtn.onclick = () => closeOverlay();
-            footer.appendChild(langBtn);
-            footer.appendChild(startBtn);
-            modal.appendChild(footer);
-          };
-          renderContent();
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-        },
-        // --- Debug Modal ---
-        openDebugModal() {
-          const DEBUG_MODAL_ID = "gemini-debug-modal";
-          if (document.getElementById(DEBUG_MODAL_ID)) return;
-          const overlay = document.createElement("div");
-          overlay.id = DEBUG_MODAL_ID;
-          overlay.className = "debug-overlay";
-          let unsubscribe = null;
-          const escHandler = (e) => {
-            if (e.key === "Escape") closeModal();
-          };
-          document.addEventListener("keydown", escHandler);
-          const closeModal = () => {
-            document.removeEventListener("keydown", escHandler);
-            if (unsubscribe) unsubscribe();
-            overlay.remove();
-          };
-          overlay.onclick = (e) => {
-            if (e.target === overlay) closeModal();
-          };
-          const modal = document.createElement("div");
-          modal.className = "debug-modal";
-          Core.applyTheme(modal, getCurrentTheme());
-          const header = document.createElement("div");
-          header.className = "debug-header";
-          const title = document.createElement("h3");
-          setIconText(title, "bug", "Debug Panel");
-          const closeBtn = document.createElement("span");
-          closeBtn.className = "debug-close";
-          closeBtn.appendChild(createIcon("x", 16));
-          closeBtn.onclick = () => closeModal();
-          header.appendChild(title);
-          header.appendChild(closeBtn);
-          const body = document.createElement("div");
-          body.className = "debug-body";
-          const info = document.createElement("div");
-          info.className = "debug-kv";
-          const infoLine = (label, value) => {
-            const div = document.createElement("div");
-            const strong = document.createElement("strong");
-            strong.textContent = label + ":";
-            div.appendChild(strong);
-            div.appendChild(document.createTextNode(" " + value));
-            return div;
-          };
-          const detected = Core.detectUser();
-          const current = Core.getCurrentUser();
-          const inspecting = Core.getInspectingUser();
-          const effective = detected || current;
-          const storageKey = effective && effective.includes("@") ? `gemini_store_${effective}` : "N/A";
-          info.appendChild(infoLine("Detected", detected || "null"));
-          info.appendChild(infoLine("Current", current));
-          info.appendChild(infoLine("Inspecting", inspecting));
-          info.appendChild(infoLine("Storage Key", storageKey));
-          info.appendChild(infoLine("Debug Enabled", String(isDebugEnabled())));
-          info.appendChild(infoLine("Log Level", Logger.getLevel()));
-          const filterRow = document.createElement("div");
-          filterRow.className = "debug-filter-row";
-          const filters = ["all", "error", "warn", "info", "debug"];
-          let activeFilter = "all";
-          let searchTerm = "";
-          const mkFilterBtn = (label) => {
-            const b = document.createElement("button");
-            b.className = "debug-filter-btn";
-            b.textContent = label.toUpperCase();
-            b.onclick = () => {
-              activeFilter = label;
-              Array.from(filterRow.children).forEach((el) => el.classList.remove("active"));
-              b.classList.add("active");
-              renderLogs();
-            };
-            return b;
-          };
-          filters.forEach((f, i) => {
-            const btn = mkFilterBtn(f);
-            if (i === 0) btn.classList.add("active");
-            filterRow.appendChild(btn);
-          });
-          const search = document.createElement("input");
-          search.className = "debug-search";
-          search.placeholder = "Search logs...";
-          search.oninput = () => {
-            searchTerm = search.value.trim().toLowerCase();
-            renderLogs();
-          };
-          const actions = document.createElement("div");
-          actions.className = "debug-actions";
-          const mkBtn = (label, onClick) => {
-            const b = document.createElement("button");
-            b.className = "settings-btn";
-            b.textContent = label;
-            b.onclick = onClick;
-            return b;
-          };
-          actions.appendChild(mkBtn("Show Detected User", () => debugShowDetectedUser()));
-          actions.appendChild(mkBtn("Dump Storage Keys", () => debugDumpStorageKeys()));
-          actions.appendChild(mkBtn("Dump Gemini Storage", () => debugDumpGeminiStores()));
-          actions.appendChild(mkBtn("Export Legacy Data", () => debugExportLegacyData()));
-          actions.appendChild(mkBtn("Export All Storage", () => debugExportAllStorage()));
-          actions.appendChild(mkBtn("Export Logs", () => debugExportLogs()));
-          actions.appendChild(mkBtn("Clear Logs", () => Logger.clear()));
-          const logList = document.createElement("div");
-          logList.className = "debug-log-list";
-          const renderLogs = () => {
-            logList.replaceChildren();
-            let entries = (0, import_debug_logger.filterLogs)(Logger.getEntries(), { level: activeFilter, term: searchTerm }).slice(-120);
-            if (entries.length === 0) {
-              const empty = document.createElement("div");
-              empty.className = "debug-log-item";
-              empty.textContent = "No logs yet.";
-              logList.appendChild(empty);
-              return;
-            }
-            entries.forEach((e) => {
-              const item = document.createElement("div");
-              item.className = "debug-log-item";
-              const meta = `${e.ts}`;
-              const lvl = document.createElement("span");
-              lvl.className = `debug-level ${e.level}`;
-              lvl.textContent = `[${e.level.toUpperCase()}]`;
-              const data = e.data ? ` ${JSON.stringify(e.data)}` : "";
-              item.textContent = `${meta} `;
-              item.appendChild(lvl);
-              item.appendChild(document.createTextNode(` ${e.msg}${data}`));
-              logList.appendChild(item);
-            });
-          };
-          renderLogs();
-          unsubscribe = Logger.subscribe(renderLogs);
-          body.appendChild(info);
-          body.appendChild(filterRow);
-          body.appendChild(search);
-          body.appendChild(actions);
-          body.appendChild(logList);
-          modal.appendChild(header);
-          modal.appendChild(body);
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-        },
-        // --- Calibration Modal ---
-        openCalibrationModal() {
-          const MODAL_ID = "gemini-calibrate-modal";
-          if (document.getElementById(MODAL_ID)) return;
-          const cm = CounterModule;
-          const todayKey = Core.getDayKey(cm.resetHour);
-          const overlay = document.createElement("div");
-          overlay.id = MODAL_ID;
-          overlay.className = "settings-overlay";
-          const escHandler = (e) => {
-            if (e.key === "Escape") closeOverlay();
-          };
-          document.addEventListener("keydown", escHandler);
-          const closeOverlay = () => {
-            document.removeEventListener("keydown", escHandler);
-            overlay.remove();
-          };
-          overlay.onclick = (e) => {
-            if (e.target === overlay) closeOverlay();
-          };
-          const modal = document.createElement("div");
-          modal.className = "settings-modal";
-          Core.applyTheme(modal, getCurrentTheme());
-          const header = document.createElement("div");
-          header.className = "settings-header";
-          const title = document.createElement("h3");
-          title.textContent = "Calibrate Data";
-          const closeBtn = document.createElement("span");
-          closeBtn.className = "settings-close";
-          closeBtn.appendChild(createIcon("x", 16));
-          closeBtn.onclick = () => closeOverlay();
-          header.appendChild(title);
-          header.appendChild(closeBtn);
-          const body = document.createElement("div");
-          body.className = "settings-body";
-          const mkField = (label, value) => {
-            const row = document.createElement("div");
-            row.className = "settings-row";
-            const lbl = document.createElement("span");
-            lbl.className = "settings-label";
-            lbl.textContent = label;
-            const input = document.createElement("input");
-            input.type = "number";
-            input.min = "0";
-            input.value = value;
-            input.className = "settings-select";
-            input.style.width = "80px";
-            input.style.textAlign = "center";
-            row.appendChild(lbl);
-            row.appendChild(input);
-            return { row, input };
-          };
-          const section = document.createElement("div");
-          section.className = "settings-section";
-          const sTitle = document.createElement("div");
-          sTitle.className = "settings-section-title";
-          sTitle.textContent = "Adjust Values";
-          section.appendChild(sTitle);
-          const todayField = mkField("Today Messages", cm.state.dailyCounts[todayKey]?.messages || 0);
-          const totalField = mkField("Lifetime Total", cm.state.total);
-          const chatsField = mkField("Chats Created", cm.state.totalChatsCreated);
-          section.appendChild(todayField.row);
-          section.appendChild(totalField.row);
-          section.appendChild(chatsField.row);
-          body.appendChild(section);
-          let chatField = null;
-          const currentCid = Core.getChatId();
-          if (currentCid) {
-            const chatSection = document.createElement("div");
-            chatSection.className = "settings-section";
-            const chatTitle = document.createElement("div");
-            chatTitle.className = "settings-section-title";
-            chatTitle.textContent = "Current Chat";
-            chatSection.appendChild(chatTitle);
-            chatField = mkField("Chat Messages", cm.state.chats[currentCid] || 0);
-            chatSection.appendChild(chatField.row);
-            const chatIdHint = document.createElement("div");
-            chatIdHint.style.cssText = "font-size: 9px; color: var(--text-sub); opacity: 0.5; margin-top: 2px;";
-            chatIdHint.textContent = "ID: " + currentCid.slice(0, 12) + "...";
-            chatSection.appendChild(chatIdHint);
-            body.appendChild(chatSection);
-          }
-          const applyBtn = document.createElement("button");
-          applyBtn.className = "settings-btn";
-          applyBtn.textContent = "Apply Calibration";
-          applyBtn.style.marginTop = "12px";
-          applyBtn.style.background = "rgba(138, 180, 248, 0.2)";
-          applyBtn.style.color = "var(--accent, #8ab4f8)";
-          applyBtn.style.fontWeight = "500";
-          applyBtn.onclick = () => {
-            const newToday = parseInt(todayField.input.value, 10) || 0;
-            const newTotal = parseInt(totalField.input.value, 10) || 0;
-            const newChats = parseInt(chatsField.input.value, 10) || 0;
-            cm.ensureTodayEntry();
-            cm.state.dailyCounts[todayKey].messages = newToday;
-            cm.state.total = newTotal;
-            cm.state.totalChatsCreated = newChats;
-            if (chatField && currentCid) {
-              const newChatVal = parseInt(chatField.input.value, 10) || 0;
-              cm.state.chats[currentCid] = newChatVal;
-            }
-            cm.saveData();
-            PanelUI.update();
-            if (cm.state.isExpanded) PanelUI.renderDetailsPane();
-            Logger.info("Data calibrated", {
-              today: newToday,
-              total: newTotal,
-              chats: newChats,
-              chatId: currentCid || null
-            });
-            closeOverlay();
-          };
-          body.appendChild(applyBtn);
-          const note = document.createElement("div");
-          note.className = "settings-version";
-          note.textContent = "Manually adjust counter values";
-          body.appendChild(note);
-          modal.appendChild(header);
-          modal.appendChild(body);
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-        },
-        // --- Dashboard Modal ---
-        openDashboard() {
-          const exist = document.getElementById("gemini-dashboard-overlay");
-          if (exist) return;
-          const cm = CounterModule;
-          const overlay = document.createElement("div");
-          overlay.id = "gemini-dashboard-overlay";
-          overlay.className = "dash-overlay";
-          const closeDash = () => {
-            document.removeEventListener("keydown", escHandler);
-            const tip = document.getElementById("g-heatmap-tooltip");
-            if (tip) tip.remove();
-            overlay.remove();
-          };
-          const escHandler = (e) => {
-            if (e.key === "Escape") closeDash();
-          };
-          document.addEventListener("keydown", escHandler);
-          overlay.onclick = (e) => {
-            if (e.target === overlay) closeDash();
-          };
-          const modal = document.createElement("div");
-          modal.className = "dash-modal";
-          Core.applyTheme(modal, getCurrentTheme());
-          const header = document.createElement("div");
-          header.className = "dash-header";
-          const titleDiv = document.createElement("div");
-          titleDiv.className = "dash-title";
-          titleDiv.textContent = "";
-          titleDiv.appendChild(createIcon("chart", 20));
-          titleDiv.appendChild(document.createTextNode(" Analytics "));
-          const userSpan = document.createElement("span");
-          userSpan.style.fontSize = "12px";
-          userSpan.style.opacity = "0.5";
-          userSpan.style.marginTop = "8px";
-          userSpan.textContent = Core.getCurrentUser().split("@")[0];
-          titleDiv.appendChild(userSpan);
-          const close = document.createElement("div");
-          close.className = "dash-close";
-          close.appendChild(createIcon("x", 22));
-          close.onclick = () => closeDash();
-          header.appendChild(titleDiv);
-          header.appendChild(close);
-          modal.appendChild(header);
-          const content = document.createElement("div");
-          content.className = "dash-content";
-          const streaks = cm.calculateStreaks();
-          const grid = document.createElement("div");
-          grid.className = "metric-grid";
-          const metrics = [
-            { label: "Total Messages", val: cm.state.total.toLocaleString() },
-            { label: "Chats Created", val: cm.state.totalChatsCreated.toLocaleString() },
-            { label: "Current Streak", val: streaks.current + " Days" },
-            { label: "Best Streak", val: streaks.best + " Days" }
-          ];
-          metrics.forEach((m) => {
-            const card = document.createElement("div");
-            card.className = "metric-card";
-            const valDiv = document.createElement("div");
-            valDiv.className = "metric-val";
-            valDiv.textContent = m.val;
-            const labelDiv = document.createElement("div");
-            labelDiv.className = "metric-label";
-            labelDiv.textContent = m.label;
-            card.appendChild(valDiv);
-            card.appendChild(labelDiv);
-            grid.appendChild(card);
-          });
-          content.appendChild(grid);
-          const hmContainer = document.createElement("div");
-          hmContainer.className = "heatmap-container";
-          const hmHeader = document.createElement("div");
-          hmHeader.className = "heatmap-title";
-          const titleSpan = document.createElement("span");
-          titleSpan.textContent = "Activity (Last 365 Days)";
-          const legend = document.createElement("div");
-          legend.className = "heatmap-legend";
-          legend.appendChild(document.createTextNode("Less "));
-          ["l-0", "l-1", "l-3", "l-4"].forEach((cls) => {
-            const item = document.createElement("div");
-            item.className = `legend-item ${cls}`;
-            legend.appendChild(item);
-          });
-          legend.appendChild(document.createTextNode(" More"));
-          hmHeader.appendChild(titleSpan);
-          hmHeader.appendChild(legend);
-          hmContainer.appendChild(hmHeader);
-          const hmWrapper = document.createElement("div");
-          hmWrapper.className = "heatmap-wrapper";
-          const weekCol = document.createElement("div");
-          weekCol.className = "heatmap-week-labels";
-          ["", "Mon", "", "Wed", "", "Fri", ""].forEach((d) => {
-            const label = document.createElement("div");
-            label.className = "week-label";
-            label.textContent = d;
-            weekCol.appendChild(label);
-          });
-          hmWrapper.appendChild(weekCol);
-          const hmMain = document.createElement("div");
-          hmMain.className = "heatmap-main";
-          const monthRow = document.createElement("div");
-          monthRow.className = "heatmap-months";
-          const hmGrid = document.createElement("div");
-          hmGrid.className = "heatmap-grid";
-          const today = /* @__PURE__ */ new Date();
-          const oneYearAgo = /* @__PURE__ */ new Date();
-          oneYearAgo.setDate(today.getDate() - 365);
-          let maxVal = 0;
-          Object.values(cm.state.dailyCounts).forEach((v) => {
-            if (v.messages > maxVal) maxVal = v.messages;
-          });
-          if (maxVal < 10) maxVal = 10;
-          let tooltip = document.getElementById("g-heatmap-tooltip");
-          if (!tooltip) {
-            tooltip = document.createElement("div");
-            tooltip.id = "g-heatmap-tooltip";
-            tooltip.className = "g-tooltip";
-            document.body.appendChild(tooltip);
-          }
-          let iterDate = new Date(oneYearAgo);
-          iterDate.setDate(iterDate.getDate() - iterDate.getDay());
-          let lastMonth = -1;
-          for (let week = 0; week < 53; week++) {
-            const currentMonth = iterDate.getMonth();
-            const mLabel = document.createElement("div");
-            mLabel.className = "month-label";
-            if (currentMonth !== lastMonth) {
-              const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-              mLabel.textContent = monthNames[currentMonth];
-              lastMonth = currentMonth;
-            }
-            monthRow.appendChild(mLabel);
-            const col = document.createElement("div");
-            col.className = "heatmap-col";
-            for (let day = 0; day < 7; day++) {
-              const key = `${iterDate.getFullYear()}-${String(iterDate.getMonth() + 1).padStart(2, "0")}-${String(iterDate.getDate()).padStart(2, "0")}`;
-              const count = cm.state.dailyCounts[key]?.messages || 0;
-              const cell = document.createElement("div");
-              cell.className = "heatmap-cell";
-              let level = "l-0";
-              if (count > 0) {
-                const ratio = count / maxVal;
-                if (ratio > 0.75) level = "l-4";
-                else if (ratio > 0.5) level = "l-3";
-                else if (ratio > 0.25) level = "l-2";
-                else level = "l-1";
-              }
-              cell.classList.add(level);
-              cell.onmouseenter = (e) => {
-                tooltip.textContent = "";
-                const b = document.createElement("div");
-                b.style.fontWeight = "bold";
-                b.textContent = key;
-                const sp = document.createElement("div");
-                sp.textContent = `${count} messages`;
-                tooltip.appendChild(b);
-                tooltip.appendChild(sp);
-                tooltip.classList.add("visible");
-                const rect = cell.getBoundingClientRect();
-                let left = rect.left + rect.width / 2;
-                let top = rect.top;
-                tooltip.style.left = left + "px";
-                tooltip.style.top = top + "px";
-                const ttRect = tooltip.getBoundingClientRect();
-                if (ttRect.right > window.innerWidth) tooltip.style.left = window.innerWidth - ttRect.width / 2 - 10 + "px";
-                if (ttRect.left < 0) tooltip.style.left = ttRect.width / 2 + 10 + "px";
-                if (ttRect.top < 0) tooltip.style.top = rect.bottom + 10 + "px";
-                if (ttRect.bottom > window.innerHeight) tooltip.style.top = rect.top - ttRect.height - 10 + "px";
-              };
-              cell.onmouseleave = () => tooltip.classList.remove("visible");
-              col.appendChild(cell);
-              iterDate.setDate(iterDate.getDate() + 1);
-              if (iterDate > today && day === today.getDay()) break;
-            }
-            hmGrid.appendChild(col);
-            if (iterDate > today) break;
-          }
-          hmMain.appendChild(monthRow);
-          hmMain.appendChild(hmGrid);
-          hmWrapper.appendChild(hmMain);
-          hmContainer.appendChild(hmWrapper);
-          content.appendChild(hmContainer);
-          const allByModel = { flash: 0, thinking: 0, pro: 0 };
-          Object.values(cm.state.dailyCounts).forEach((entry) => {
-            if (entry.byModel) {
-              allByModel.flash += entry.byModel.flash || 0;
-              allByModel.thinking += entry.byModel.thinking || 0;
-              allByModel.pro += entry.byModel.pro || 0;
-            }
-          });
-          const modelTotal = allByModel.flash + allByModel.thinking + allByModel.pro;
-          if (modelTotal > 0) {
-            const modelContainer = document.createElement("div");
-            modelContainer.className = "heatmap-container";
-            const modelTitle = document.createElement("div");
-            modelTitle.className = "heatmap-title";
-            const modelTitleSpan = document.createElement("span");
-            modelTitleSpan.textContent = "Model Usage Distribution";
-            modelTitle.appendChild(modelTitleSpan);
-            modelContainer.appendChild(modelTitle);
-            const modelColors = { flash: CounterModule.MODEL_CONFIG.flash.color, thinking: CounterModule.MODEL_CONFIG.thinking.color, pro: CounterModule.MODEL_CONFIG.pro.color };
-            const models = [
-              { key: "flash", label: "3 Flash", count: allByModel.flash },
-              { key: "thinking", label: "3 Flash Thinking", count: allByModel.thinking },
-              { key: "pro", label: "3 Pro", count: allByModel.pro }
-            ];
-            models.forEach((m) => {
-              const pct = (m.count / modelTotal * 100).toFixed(1);
-              const barRow = document.createElement("div");
-              barRow.style.cssText = "display: flex; align-items: center; gap: 8px; margin-bottom: 8px;";
-              const labelEl = document.createElement("div");
-              labelEl.style.cssText = "font-size: 11px; color: var(--text-sub); width: 110px; flex-shrink: 0;";
-              labelEl.textContent = m.label;
-              const barBg = document.createElement("div");
-              barBg.style.cssText = "flex: 1; height: 16px; background: var(--btn-bg, rgba(255,255,255,0.05)); border-radius: 4px; overflow: hidden;";
-              const barFill = document.createElement("div");
-              barFill.style.cssText = `height: 100%; width: ${pct}%; background: ${modelColors[m.key]}; border-radius: 4px; transition: width 0.4s;`;
-              barBg.appendChild(barFill);
-              const valEl = document.createElement("div");
-              valEl.style.cssText = "font-size: 11px; color: var(--text-main); width: 70px; text-align: right; flex-shrink: 0; font-family: monospace;";
-              valEl.textContent = `${m.count} (${pct}%)`;
-              barRow.appendChild(labelEl);
-              barRow.appendChild(barBg);
-              barRow.appendChild(valEl);
-              modelContainer.appendChild(barRow);
-            });
-            const weightedTotal = Object.keys(allByModel).reduce((sum, k) => sum + (allByModel[k] || 0) * (CounterModule.MODEL_CONFIG[k]?.multiplier ?? 1), 0);
-            const wStr = weightedTotal % 1 === 0 ? String(weightedTotal) : weightedTotal.toFixed(1);
-            const weightedRow = document.createElement("div");
-            weightedRow.style.cssText = "font-size: 11px; color: var(--text-sub); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider, rgba(255,255,255,0.05));";
-            weightedRow.textContent = `Total Weighted: ${wStr} | Raw Messages: ${modelTotal}`;
-            modelContainer.appendChild(weightedRow);
-            content.appendChild(modelContainer);
-          }
-          modal.appendChild(content);
-          overlay.appendChild(modal);
-          document.body.appendChild(overlay);
-          setTimeout(() => {
-            hmContainer.scrollLeft = hmContainer.scrollWidth;
-          }, 0);
-        }
+        // --- Delegated modals (extracted to panel_settings.js / panel_dashboard.js) ---
+        openSettingsModal,
+        showOnboarding,
+        openDebugModal,
+        openCalibrationModal,
+        openDashboard
       };
     }
   });
@@ -4004,6 +4160,10 @@
             clearTimeout(this._initTimeout);
             this._initTimeout = null;
           }
+          if (this._searchDebounce) {
+            clearTimeout(this._searchDebounce);
+            this._searchDebounce = null;
+          }
           DOMWatcher.unregister("folders-sidebar");
           this.dragState = null;
           this.folderDragState = null;
@@ -4042,7 +4202,7 @@
           if (!sidebar) return;
           const filterBar = document.createElement("div");
           filterBar.id = FILTER_ID;
-          filterBar.style.cssText = "display:flex;gap:4px;padding:6px 12px;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,0.08);align-items:center;flex-shrink:0;scrollbar-width:none;height:auto;max-height:36px;align-self:start;";
+          filterBar.className = "gc-filter-bar";
           this._renderFilterTabs(filterBar);
           if (!sidebar) return;
           const overflowC = sidebar.querySelector(".overflow-container") || sidebar;
@@ -4068,9 +4228,13 @@
         },
         _createFilterTab(label, folderId, color) {
           const tab = document.createElement("button");
-          tab.className = "gc-native-btn";
           const isActive = this._activeFilter === folderId;
-          tab.style.cssText = `padding:3px 10px;border-radius:14px;font-size:12px;white-space:nowrap;cursor:pointer;border:1px solid ${color || "#8ab4f8"}40;background:${isActive ? (color || "#8ab4f8") + "30" : "transparent"};color:${isActive ? color || "#8ab4f8" : "#aaa"};font-weight:${isActive ? "600" : "400"};transition:all 0.15s;`;
+          tab.className = "gc-filter-tab" + (isActive ? " active" : "");
+          const c = color || "var(--accent, #8ab4f8)";
+          if (isActive) {
+            tab.style.background = c + "12";
+            tab.style.color = c;
+          }
           tab.textContent = label;
           tab.onclick = (e) => {
             e.stopPropagation();
@@ -4691,7 +4855,8 @@
           searchInput.value = this._searchQuery || "";
           searchInput.oninput = (e) => {
             this._searchQuery = e.target.value;
-            PanelUI.renderDetailsPane();
+            if (this._searchDebounce) clearTimeout(this._searchDebounce);
+            this._searchDebounce = setTimeout(() => PanelUI.renderDetailsPane(), 150);
           };
           searchWrap.appendChild(searchInput);
           container.appendChild(searchWrap);
@@ -4896,9 +5061,11 @@
           deleteBtn.title = "Delete";
           deleteBtn.onclick = (e) => {
             e.stopPropagation();
-            if (confirm(`Delete "${folder.name}"?`)) {
-              this.deleteFolder(folderId);
-            }
+            NativeUI.showConfirm(
+              NativeUI.t(`确认删除文件夹 "${folder.name}"？`, `Delete folder "${folder.name}"?`),
+              () => this.deleteFolder(folderId),
+              { confirmText: NativeUI.t("删除", "Delete"), danger: true }
+            );
           };
           const pinBtn = document.createElement("span");
           pinBtn.className = "gf-folder-action";
@@ -4970,7 +5137,7 @@
               }
               const chatTitle = document.createElement("span");
               chatTitle.className = "gf-chat-title";
-              chatTitle.textContent = chat.title.length > 20 ? chat.title.slice(0, 20) + "..." : chat.title;
+              chatTitle.textContent = chat.title;
               chatTitle.title = chat.title;
               const removeBtn = document.createElement("span");
               removeBtn.className = "gf-chat-remove";
@@ -5236,16 +5403,9 @@
           if (!trailing) return;
           const btn = document.createElement("button");
           btn.id = NATIVE_ID;
-          btn.className = "gc-native-btn";
+          btn.className = "gc-input-btn";
           btn.appendChild(createIcon("gem", 16));
           btn.title = "Prompt Vault";
-          btn.style.cssText = "background:transparent;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:50%;transition:background 0.2s;line-height:1;display:flex;align-items:center;";
-          btn.onmouseenter = () => {
-            btn.style.background = "rgba(128,128,128,0.2)";
-          };
-          btn.onmouseleave = () => {
-            btn.style.background = "transparent";
-          };
           btn.onclick = (e) => {
             e.stopPropagation();
             this._toggleQuickMenu(btn);
@@ -5281,8 +5441,9 @@
             empty.textContent = "还没有保存的提示词";
             menu.appendChild(empty);
           } else {
+            const sorted = [...this._prompts].sort((a, b) => (b.usedCount || 0) - (a.usedCount || 0));
             const categories = {};
-            this._prompts.forEach((p) => {
+            sorted.forEach((p) => {
               const cat = p.category || "General";
               if (!categories[cat]) categories[cat] = [];
               categories[cat].push(p);
@@ -5495,6 +5656,73 @@
               container.appendChild(row);
             });
           });
+          const ioRow = document.createElement("div");
+          ioRow.style.cssText = "display:flex;gap:6px;margin-top:8px;";
+          const exportBtn = document.createElement("button");
+          exportBtn.style.cssText = "flex:1;font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--divider,rgba(255,255,255,0.1));background:var(--btn-bg,rgba(255,255,255,0.05));color:var(--text-sub,#9aa0a6);cursor:pointer;";
+          exportBtn.textContent = NativeUI.t("导出", "Export");
+          exportBtn.onclick = (e) => {
+            e.stopPropagation();
+            this._exportPrompts();
+          };
+          const importBtn = document.createElement("button");
+          importBtn.style.cssText = "flex:1;font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--divider,rgba(255,255,255,0.1));background:var(--btn-bg,rgba(255,255,255,0.05));color:var(--text-sub,#9aa0a6);cursor:pointer;";
+          importBtn.textContent = NativeUI.t("导入", "Import");
+          importBtn.onclick = (e) => {
+            e.stopPropagation();
+            this._importPrompts();
+          };
+          ioRow.appendChild(exportBtn);
+          ioRow.appendChild(importBtn);
+          container.appendChild(ioRow);
+        },
+        _exportPrompts() {
+          const data = JSON.stringify(this._prompts, null, 2);
+          const blob = new Blob([data], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `primer-pp-prompts-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          NativeUI.showToast(NativeUI.t("提示词已导出", "Prompts exported"));
+        },
+        _importPrompts() {
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = ".json";
+          input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              try {
+                const imported = JSON.parse(ev.target.result);
+                if (!Array.isArray(imported)) throw new Error("Invalid format");
+                let added = 0;
+                imported.forEach((p) => {
+                  if (p.name && p.content) {
+                    this._prompts.push({
+                      id: "p_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+                      name: p.name,
+                      content: p.content,
+                      category: p.category || "General",
+                      createdAt: p.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+                      usedCount: p.usedCount || 0
+                    });
+                    added++;
+                  }
+                });
+                this._save();
+                PanelUI.renderDetailsPane();
+                NativeUI.showToast(NativeUI.t(`已导入 ${added} 条提示词`, `Imported ${added} prompts`));
+              } catch (err) {
+                NativeUI.showToast(NativeUI.t("导入失败: 格式无效", "Import failed: invalid format"));
+              }
+            };
+            reader.readAsText(file);
+          };
+          input.click();
         },
         showPromptEditor(existing) {
           const overlay = document.createElement("div");
@@ -5579,6 +5807,7 @@
       init_logger();
       init_core();
       init_native_ui();
+      init_icons();
       init_counter();
       DefaultModelModule = {
         id: "default-model",
@@ -5622,9 +5851,12 @@
           if (!modelBtn) return;
           const lock = document.createElement("span");
           lock.id = LOCK_ID;
-          lock.textContent = "🔒";
-          lock.title = "已锁定: " + (this._preferredModel === "flash" ? "Fast" : this._preferredModel === "thinking" ? "Thinking" : "Pro");
-          lock.style.cssText = "font-size:10px;opacity:0.6;margin-left:4px;cursor:default;user-select:none;";
+          lock.className = "gc-model-lock";
+          lock.appendChild(createIcon("lock", 10));
+          const lockLabel = document.createElement("span");
+          lockLabel.textContent = this._preferredModel === "flash" ? "Fast" : this._preferredModel === "thinking" ? "Think" : "Pro";
+          lock.appendChild(lockLabel);
+          lock.title = "已锁定: " + lockLabel.textContent;
           modelBtn.parentElement.appendChild(lock);
         },
         removeNativeUI() {
@@ -5812,19 +6044,13 @@
           if (!sidebar) return;
           const toolbar = document.createElement("div");
           toolbar.id = TOOLBAR_ID;
-          toolbar.style.cssText = "padding:4px 12px;border-bottom:1px solid rgba(255,255,255,0.06);height:auto;max-height:40px;align-self:start;";
+          toolbar.className = "gc-sidebar-toolbar";
           if (this._batchMode) {
             this._renderBatchToolbar(toolbar);
           } else {
             const enterBtn = document.createElement("button");
-            enterBtn.style.cssText = "background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;width:100%;";
+            enterBtn.className = "gc-sidebar-btn full-width";
             enterBtn.textContent = NativeUI.t("🗑️ 批量管理", "🗑️ Batch Manage");
-            enterBtn.onmouseenter = () => {
-              enterBtn.style.color = "#e8eaed";
-            };
-            enterBtn.onmouseleave = () => {
-              enterBtn.style.color = "#9aa0a6";
-            };
             enterBtn.onclick = () => {
               this._batchMode = true;
               this._refreshNativeUI();
@@ -5852,9 +6078,9 @@
           if (this._batchMode) this._injectCheckboxes();
         },
         _renderBatchToolbar(toolbar) {
-          toolbar.style.cssText = "padding:4px 12px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:6px;height:auto;max-height:40px;overflow:hidden;";
+          toolbar.className = "gc-sidebar-toolbar gc-sidebar-toolbar-active";
           const selectAllBtn = document.createElement("button");
-          selectAllBtn.style.cssText = "background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;";
+          selectAllBtn.className = "gc-sidebar-btn";
           selectAllBtn.textContent = NativeUI.t("全选", "Select All");
           selectAllBtn.onclick = () => {
             const chats = this._scanChats();
@@ -5862,7 +6088,7 @@
             this._refreshNativeUI();
           };
           const cancelBtn = document.createElement("button");
-          cancelBtn.style.cssText = "background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;";
+          cancelBtn.className = "gc-sidebar-btn";
           cancelBtn.textContent = NativeUI.t("取消", "Cancel");
           cancelBtn.onclick = () => {
             this._batchMode = false;
@@ -5870,19 +6096,21 @@
             this._refreshNativeUI();
           };
           const countLabel = document.createElement("span");
-          countLabel.style.cssText = "font-size:10px;color:#8ab4f8;flex:1;text-align:center;";
+          countLabel.className = "gc-count-label";
           countLabel.textContent = NativeUI.t("已选 " + this._selected.size + " 个", this._selected.size + " selected");
           toolbar.appendChild(selectAllBtn);
           toolbar.appendChild(cancelBtn);
           toolbar.appendChild(countLabel);
           if (this._selected.size > 0) {
             const deleteBtn = document.createElement("button");
-            deleteBtn.style.cssText = "background:#ea4335;color:#fff;border:none;border-radius:6px;padding:2px 10px;font-size:10px;cursor:pointer;";
+            deleteBtn.className = "gc-sidebar-btn danger";
             deleteBtn.textContent = NativeUI.t("🗑️ 删除", "🗑️ Delete");
             deleteBtn.onclick = () => {
-              if (confirm(NativeUI.t("确认删除选中的 " + this._selected.size + " 个对话？", "Delete " + this._selected.size + " selected conversation(s)?"))) {
-                this._batchDelete();
-              }
+              NativeUI.showConfirm(
+                NativeUI.t("确认删除选中的 " + this._selected.size + " 个对话？", "Delete " + this._selected.size + " selected conversation(s)?"),
+                () => this._batchDelete(),
+                { confirmText: NativeUI.t("删除", "Delete"), danger: true }
+              );
             };
             toolbar.appendChild(deleteBtn);
           }
@@ -5894,7 +6122,7 @@
             const check = document.createElement("div");
             check.className = "gc-batch-check";
             const isChecked = this._selected.has(chat.id);
-            check.style.cssText = "width:16px;height:16px;border-radius:3px;border:2px solid " + (isChecked ? "#8ab4f8" : "#5f6368") + ";background:" + (isChecked ? "#8ab4f8" : "transparent") + ";flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;margin-right:6px;vertical-align:middle;";
+            check.dataset.checked = isChecked ? "true" : "false";
             check.textContent = isChecked ? "✓" : "";
             check.onclick = (e) => {
               e.preventDefault();
@@ -6016,9 +6244,11 @@
             deleteBtn.style.cssText = "background:#ea4335;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;";
             deleteBtn.textContent = "Delete " + this._selected.size + " chats";
             deleteBtn.onclick = () => {
-              if (confirm("确认删除选中的 " + this._selected.size + " 个对话？此操作不可撤销。")) {
-                this._batchDelete();
-              }
+              NativeUI.showConfirm(
+                NativeUI.t("确认删除选中的 " + this._selected.size + " 个对话？此操作不可撤销。", "Delete " + this._selected.size + " chats? This cannot be undone."),
+                () => this._batchDelete(),
+                { confirmText: NativeUI.t("删除", "Delete"), danger: true }
+              );
             };
             header.appendChild(deleteBtn);
           }
@@ -6163,25 +6393,10 @@
         _showFab(x, y, text) {
           this._removeFab();
           const fab = document.createElement("div");
-          fab.style.cssText = [
-            "position:fixed",
-            "z-index:2147483646",
-            "background:var(--accent, #8ab4f8)",
-            "color:#fff",
-            "padding:4px 10px",
-            "border-radius:14px",
-            "font-size:12px",
-            "font-weight:600",
-            "cursor:pointer",
-            "box-shadow:0 2px 8px rgba(0,0,0,0.3)",
-            "user-select:none",
-            "transition:opacity 0.15s, transform 0.15s",
-            "opacity:0",
-            "transform:scale(0.9)"
-          ].join(";");
+          fab.className = "gc-quote-fab";
           fab.textContent = "💬 Quote";
-          const fabW = 80;
-          const fabH = 28;
+          const fabW = 90;
+          const fabH = 30;
           let left = Math.min(x + 8, window.innerWidth - fabW - 10);
           let top = Math.max(y - fabH - 8, 10);
           fab.style.left = left + "px";
@@ -6193,10 +6408,7 @@
           };
           document.body.appendChild(fab);
           this._fab = fab;
-          requestAnimationFrame(() => {
-            fab.style.opacity = "1";
-            fab.style.transform = "scale(1)";
-          });
+          requestAnimationFrame(() => fab.classList.add("visible"));
           setTimeout(() => {
             if (this._fab === fab) this._removeFab();
           }, TIMINGS.FAB_AUTO_DISMISS);
@@ -6315,21 +6527,31 @@
           if (!inputArea) return;
           const dots = document.createElement("div");
           dots.id = IND_ID;
-          dots.style.cssText = "display:flex;gap:3px;position:absolute;bottom:4px;right:4px;pointer-events:none;z-index:1;";
+          dots.className = "gc-tweaks-dots";
           dots.title = this._getStatusText();
           const keys = ["ctrlEnter", "tabTitle", "chatWidth"];
           keys.forEach((key) => {
             const dot = document.createElement("div");
-            const on = this.features[key]?.enabled;
-            dot.style.cssText = "width:4px;height:4px;border-radius:50%;background:" + (on ? "#8ab4f8" : "#555") + ";transition:background 0.2s;";
+            dot.className = "gc-tweaks-dot" + (this.features[key]?.enabled ? " on" : "");
             dots.appendChild(dot);
           });
           const pos = getComputedStyle(inputArea).position;
           if (pos === "static" || pos === "") inputArea.style.position = "relative";
           inputArea.appendChild(dots);
+          if (this.features.ctrlEnter.enabled) {
+            const HINT_ID = "gc-tweaks-send-hint";
+            if (!document.getElementById(HINT_ID)) {
+              const hint = document.createElement("div");
+              hint.id = HINT_ID;
+              hint.className = "gc-send-hint";
+              hint.textContent = "Ctrl+Enter ↵";
+              inputArea.appendChild(hint);
+            }
+          }
         },
         removeNativeUI() {
           NativeUI.remove("gc-tweaks-indicator");
+          NativeUI.remove("gc-tweaks-send-hint");
         },
         _getStatusText() {
           const items = [];
@@ -6507,6 +6729,297 @@
     }
   });
 
+  // src/native_ui_styles.js
+  function injectNativeUIStyles() {
+    GM_addStyle(`
+        /* ============================================ */
+        /* Sidebar injections                           */
+        /* ============================================ */
+
+        .gc-filter-bar {
+            display: flex;
+            gap: 4px;
+            padding: 6px 12px;
+            overflow-x: auto;
+            align-items: center;
+            flex-shrink: 0;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            height: auto;
+            max-height: 36px;
+            align-self: start;
+        }
+        .gc-filter-bar::-webkit-scrollbar { display: none; }
+
+        .gc-filter-tab {
+            padding: 4px 12px;
+            border-radius: 14px;
+            font-size: 12px;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            white-space: nowrap;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-sub, #9aa0a6);
+            font-weight: 400;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            line-height: 1.4;
+            user-select: none;
+            opacity: 0.7;
+        }
+        .gc-filter-tab:hover {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-main, #e8eaed);
+            opacity: 1;
+        }
+        .gc-filter-tab.active {
+            font-weight: 500;
+            opacity: 1;
+        }
+
+        .gc-sidebar-toolbar {
+            padding: 4px 12px;
+            height: auto;
+            max-height: 40px;
+            align-self: start;
+        }
+
+        .gc-sidebar-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-sub, #9aa0a6);
+            border-radius: 14px;
+            padding: 5px 14px;
+            font-size: 12px;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            opacity: 0.6;
+        }
+        .gc-sidebar-btn:hover {
+            color: var(--text-main, #e8eaed);
+            background: rgba(255,255,255,0.06);
+            opacity: 1;
+        }
+        .gc-sidebar-btn.full-width {
+            width: 100%;
+        }
+        .gc-sidebar-btn.danger {
+            background: rgba(234,67,53,0.15);
+            color: #f28b82;
+            border: none;
+        }
+        .gc-sidebar-btn.danger:hover {
+            background: rgba(234,67,53,0.25);
+        }
+
+        .gc-sidebar-toolbar-active {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .gc-count-label {
+            font-size: 11px;
+            color: var(--accent, #8ab4f8);
+            flex: 1;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .gc-batch-check {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            border: 2px solid var(--text-sub, #5f6368);
+            background: transparent;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #fff;
+            cursor: pointer;
+            margin-right: 6px;
+            vertical-align: middle;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .gc-batch-check[data-checked="true"] {
+            border-color: var(--accent, #8ab4f8);
+            background: var(--accent, #8ab4f8);
+        }
+
+        /* ============================================ */
+        /* Input area injections                        */
+        /* ============================================ */
+
+        .gc-input-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-sub, #9aa0a6);
+        }
+        .gc-input-btn:hover {
+            background: var(--row-hover, rgba(128,128,128,0.15));
+            color: var(--text-main, #e8eaed);
+        }
+        .gc-input-btn:active {
+            transform: scale(0.92);
+        }
+
+        .gc-tweaks-dots {
+            display: flex;
+            gap: 4px;
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .gc-tweaks-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-sub, #555);
+            transition: background 0.3s;
+        }
+        .gc-tweaks-dot.on {
+            background: var(--accent, #8ab4f8);
+            animation: gcDotPulse 2.5s infinite;
+        }
+        @keyframes gcDotPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .gc-send-hint {
+            position: absolute;
+            bottom: 8px;
+            right: 36px;
+            font-size: 11px;
+            color: var(--text-sub, #9aa0a6);
+            opacity: 0.6;
+            pointer-events: none;
+            z-index: 1;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            background: var(--btn-bg, rgba(255,255,255,0.06));
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ============================================ */
+        /* Chat header injections                       */
+        /* ============================================ */
+
+        .gc-header-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-sub, #9aa0a6);
+        }
+        .gc-header-btn:hover {
+            opacity: 1;
+            background: rgba(128, 128, 128, 0.15);
+        }
+        .gc-header-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* ============================================ */
+        /* Model lock indicator                         */
+        /* ============================================ */
+
+        .gc-model-lock {
+            font-size: 11px;
+            padding: 1px 5px;
+            border-radius: 4px;
+            background: var(--badge-bg, rgba(255,255,255,0.06));
+            color: var(--text-sub, #9aa0a6);
+            margin-left: 4px;
+            cursor: default;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        /* ============================================ */
+        /* Quote reply FAB                              */
+        /* ============================================ */
+
+        .gc-quote-fab {
+            position: fixed;
+            z-index: 2147483646;
+            background: var(--accent, #8ab4f8);
+            color: #fff;
+            padding: 5px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            cursor: pointer;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+            user-select: none;
+            transition: opacity 0.15s, transform 0.15s;
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        .gc-quote-fab.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* ============================================ */
+        /* Toast notification                           */
+        /* ============================================ */
+
+        .gc-toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: var(--bg, #303134);
+            color: var(--text-main, #e8eaed);
+            border: 1px solid var(--border, rgba(255,255,255,0.12));
+            padding: 10px 24px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-family: 'Google Sans', Roboto, sans-serif;
+            z-index: 2147483647;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .gc-toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    `);
+  }
+  var init_native_ui_styles = __esm({
+    "src/native_ui_styles.js"() {
+    }
+  });
+
   // src/main.js
   var require_main = __commonJS({
     "src/main.js"() {
@@ -6528,6 +7041,7 @@
       init_batch_delete();
       init_quote_reply();
       init_ui_tweaks();
+      init_native_ui_styles();
       ModuleRegistry.register(CounterModule);
       ModuleRegistry.register(ExportModule);
       ModuleRegistry.register(FoldersModule);
@@ -6610,6 +7124,7 @@
         }
       }
       function onDOMStructureChange() {
+        Core.invalidateSidebarCache();
         if (ModuleRegistry.isEnabled("counter") && !document.getElementById(PANEL_ID)) {
           PanelUI.create();
         }
@@ -6617,6 +7132,7 @@
         NativeUI.tick();
       }
       PanelUI.injectStyles();
+      injectNativeUIStyles();
       ModuleRegistry.init();
       DOMWatcher.init();
       Core._updateAutoListener(Core.getTheme());

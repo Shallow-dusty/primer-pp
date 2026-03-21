@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Primer++ for Gemini (v10.17)
+// @name         Primer++ for Gemini (v11.0)
 // @namespace    http://tampermonkey.net/
-// @version      10.17
+// @version      11.0
 // @description  模块化架构：可扩展的 Gemini 助手平台 - 原生 UI 集成 + 模块引导 + 计数器 + 热力图 + 配额追踪 + 对话文件夹 (Pure Enhancement)
 // @author       Script Weaver
 // @match        https://gemini.google.com/*
