@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run build              # Build both userscript + extension
-npm run build:userscript   # Build userscript only → GeminiPrimerPP.user.js
+npm run build:userscript   # Build userscript only → primer-pp.user.js
 npm run build:extension    # Build extension only → dist/extension/
 npm test                   # Run tests with 100% coverage enforcement (c8 + node --test)
 ```
@@ -20,7 +20,7 @@ Tests enforce **100% branch/function/line/statement coverage** on `lib/`. `prete
 ### Build Pipeline
 
 **esbuild** via `scripts/build.js`, controlled by `TARGET` env var:
-- **Userscript**: `src/main.js` → IIFE bundle with `src/meta.txt` banner → `GeminiPrimerPP.user.js` (root)
+- **Userscript**: `src/main.js` → IIFE bundle with `src/meta.txt` banner → `primer-pp.user.js` (root)
 - **Extension**: two-phase build — `src/platforms/extension/content.js` (GM_* polyfill) and `src/main.js` bundled separately as ESM, then concatenated into an async IIFE wrapper so polyfill can `await chrome.storage.local.get()` before main runs → `dist/extension/content.js`
 
 ### Key Design Patterns
@@ -66,7 +66,7 @@ tests/                  → Unit tests for lib/ (node:test + c8)
 
 ### Data Flow
 
-1. **Userscript**: Tampermonkey loads `GeminiPrimerPP.user.js` → `main.js` → boots directly with native GM_* APIs
+1. **Userscript**: Tampermonkey loads `primer-pp.user.js` → `main.js` → boots directly with native GM_* APIs
 2. **Extension**: `content.js` → async IIFE: init GM_* polyfill (preload chrome.storage) → then run `main.js`
 3. `main.js`: initializes Core → registers 8 modules → starts main loop (polling every 1500ms)
 4. Main loop: detects user/model changes → creates/updates panel → ticks enabled modules

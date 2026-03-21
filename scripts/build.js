@@ -20,14 +20,14 @@ if (!target || target === 'userscript') {
             entryPoints: [path.join(root, 'src', 'main.js')],
             bundle: true,
             format: 'iife',
-            outfile: path.join(root, 'GeminiPrimerPP.user.js'),
+            outfile: path.join(root, 'primer-pp.user.js'),
             banner: { js: banner },
             target: 'es2020',
             charset: 'utf8',
             logLevel: 'info',
         });
         if (result.errors.length > 0) { ok = false; }
-        else { console.log('✓ Userscript: GeminiPrimerPP.user.js'); }
+        else { console.log('✓ Userscript: primer-pp.user.js'); }
     } catch (e) {
         console.error('Userscript build failed:', e.message);
         ok = false;

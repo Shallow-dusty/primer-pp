@@ -1385,7 +1385,7 @@ export const PanelUI = {
         // Version
         const version = document.createElement('div');
         version.className = 'settings-version';
-        version.textContent = 'Gemini Primer++ v' + VERSION;
+        version.textContent = 'Primer++ for Gemini v' + VERSION;
         body.appendChild(version);
 
         modal.appendChild(header);

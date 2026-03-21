@@ -2,7 +2,7 @@ import { GLOBAL_KEYS, PANEL_ID } from './constants.js';
 import { NativeUI } from './native_ui.js';
 
 const STEPS = [
-    { sel: '#' + PANEL_ID, zh: '这是 Gemini Primer++ 控制面板，可拖拽移动', en: 'This is the Gemini Primer++ control panel, drag to move' },
+    { sel: '#' + PANEL_ID, zh: '这是 Primer++ 控制面板，可拖拽移动', en: 'This is the Primer++ control panel, drag to move' },
     { sel: '#g-user-capsule', zh: '当前登录用户，点击可切换查看其他用户数据', en: 'Current user, click to switch viewing other users' },
     { sel: '#g-big-display', zh: '今日消息计数，实时更新', en: 'Today\'s message count, updates in real-time' },
     { sel: '#g-model-badge', zh: '当前模型显示（Flash/Thinking/Pro）', en: 'Current model display (Flash/Thinking/Pro)' },

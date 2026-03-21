@@ -1,4 +1,4 @@
-# Gemini Ultra Toolkit
+# Primer++ for Gemini
 
 Modular assistant platform for [Google Gemini](https://gemini.google.com/) — available as both a **Tampermonkey userscript** and a **browser extension** (Chrome/Edge/Firefox).
 
@@ -22,7 +22,7 @@ All modules can be individually enabled/disabled from the settings panel.
 ### Userscript (Tampermonkey / Violentmonkey)
 
 1. Install [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
-2. Open `GeminiPrimerPP.user.js` and click "Install"
+2. Open `primer-pp.user.js` and click "Install"
 
 ### Browser Extension
 
@@ -50,7 +50,7 @@ npm install
 | Command | Description |
 |---------|-------------|
 | `npm run build` | Build both userscript and extension |
-| `npm run build:userscript` | Build userscript only → `GeminiPrimerPP.user.js` |
+| `npm run build:userscript` | Build userscript only → `primer-pp.user.js` |
 | `npm run build:extension` | Build extension only → `dist/extension/` |
 | `npm test` | Run tests with 100% coverage enforcement |
 

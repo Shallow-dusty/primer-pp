@@ -35,7 +35,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: userscript
-          path: GeminiPrimerPP.user.js
+          path: primer-pp.user.js
       - uses: actions/upload-artifact@v4
         with:
           name: extension

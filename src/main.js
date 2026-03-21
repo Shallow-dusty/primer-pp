@@ -1,5 +1,5 @@
 // ╔══════════════════════════════════════════════════════════════════════════╗
-// ║              Gemini Primer++ v10.17 — Entry Point                        ║
+// ║              Primer++ for Gemini v10.17 — Entry Point                        ║
 // ╚══════════════════════════════════════════════════════════════════════════╝
 
 import { TIMINGS, GLOBAL_KEYS, PANEL_ID, DEFAULT_POS, TEMP_USER } from './constants.js';
