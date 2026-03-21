@@ -323,6 +323,80 @@ export const PromptVaultModule = {
                 container.appendChild(row);
             });
         });
+
+        // Import/Export buttons
+        const ioRow = document.createElement('div');
+        ioRow.style.cssText = 'display:flex;gap:6px;margin-top:8px;';
+
+        const exportBtn = document.createElement('button');
+        exportBtn.style.cssText = 'flex:1;font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--divider,rgba(255,255,255,0.1));background:var(--btn-bg,rgba(255,255,255,0.05));color:var(--text-sub,#9aa0a6);cursor:pointer;';
+        exportBtn.textContent = NativeUI.t('导出', 'Export');
+        exportBtn.onclick = (e) => {
+            e.stopPropagation();
+            this._exportPrompts();
+        };
+
+        const importBtn = document.createElement('button');
+        importBtn.style.cssText = 'flex:1;font-size:10px;padding:4px 8px;border-radius:6px;border:1px solid var(--divider,rgba(255,255,255,0.1));background:var(--btn-bg,rgba(255,255,255,0.05));color:var(--text-sub,#9aa0a6);cursor:pointer;';
+        importBtn.textContent = NativeUI.t('导入', 'Import');
+        importBtn.onclick = (e) => {
+            e.stopPropagation();
+            this._importPrompts();
+        };
+
+        ioRow.appendChild(exportBtn);
+        ioRow.appendChild(importBtn);
+        container.appendChild(ioRow);
+    },
+
+    _exportPrompts() {
+        const data = JSON.stringify(this._prompts, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `primer-pp-prompts-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        NativeUI.showToast(NativeUI.t('提示词已导出', 'Prompts exported'));
+    },
+
+    _importPrompts() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const imported = JSON.parse(ev.target.result);
+                    if (!Array.isArray(imported)) throw new Error('Invalid format');
+                    let added = 0;
+                    imported.forEach(p => {
+                        if (p.name && p.content) {
+                            this._prompts.push({
+                                id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                                name: p.name,
+                                content: p.content,
+                                category: p.category || 'General',
+                                createdAt: p.createdAt || new Date().toISOString(),
+                                usedCount: p.usedCount || 0
+                            });
+                            added++;
+                        }
+                    });
+                    this._save();
+                    PanelUI.renderDetailsPane();
+                    NativeUI.showToast(NativeUI.t(`已导入 ${added} 条提示词`, `Imported ${added} prompts`));
+                } catch (err) {
+                    NativeUI.showToast(NativeUI.t('导入失败: 格式无效', 'Import failed: invalid format'));
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
     },
 
     showPromptEditor(existing) {
