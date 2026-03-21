@@ -106,6 +106,7 @@ export const ExportModule = {
         a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
+        NativeUI.showToast(NativeUI.t('已导出: ' + filename, 'Exported: ' + filename));
     },
 
     _getFilePrefix() {
