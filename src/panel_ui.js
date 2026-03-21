@@ -597,13 +597,14 @@ export const PanelUI = {
         }
     },
 
-    // --- 详情面板渲染 ---
+    // --- 详情面板渲染 (optimized: separate tab bar from content) ---
+    _prevTabIds: null,
+
     renderDetailsPane() {
         const pane = document.getElementById('g-details-pane');
         if (!pane) return;
-        pane.replaceChildren();
 
-        // Collect available tabs (stats is always present)
+        // Collect available tabs
         const tabs = [{ id: 'stats', iconName: 'chart' }];
         Object.keys(ModuleRegistry.modules).forEach(id => {
             const mod = ModuleRegistry.modules[id];
@@ -612,39 +613,67 @@ export const PanelUI = {
             }
         });
 
-        // Fallback to stats if active tab was disabled
         if (!tabs.find(t => t.id === this._activeTab)) this._activeTab = 'stats';
 
-        // Only render tab bar when >1 tab
-        if (tabs.length > 1) {
-            const tabBar = document.createElement('div');
-            tabBar.className = 'details-tab-bar';
-            tabs.forEach(t => {
-                const tab = document.createElement('div');
-                tab.className = `details-tab ${t.id === this._activeTab ? 'active' : ''}`;
-                if (t.iconName) {
-                    tab.appendChild(createIcon(t.iconName, 14));
-                } else {
-                    tab.textContent = t.icon;
-                }
-                tab.title = t.id;
-                tab.onclick = (e) => {
-                    e.stopPropagation();
-                    this._activeTab = t.id;
-                    this.renderDetailsPane();
-                };
-                tabBar.appendChild(tab);
-            });
-            pane.appendChild(tabBar);
+        const tabIds = tabs.map(t => t.id).join(',');
+        const tabBarChanged = tabIds !== this._prevTabIds;
+
+        // Rebuild tab bar only when tab set changes
+        if (tabBarChanged) {
+            pane.replaceChildren();
+            this._prevTabIds = tabIds;
+
+            if (tabs.length > 1) {
+                const tabBar = document.createElement('div');
+                tabBar.id = 'g-details-tab-bar';
+                tabBar.className = 'details-tab-bar';
+                tabs.forEach(t => {
+                    const tab = document.createElement('div');
+                    tab.className = `details-tab ${t.id === this._activeTab ? 'active' : ''}`;
+                    tab.dataset.tabId = t.id;
+                    if (t.iconName) {
+                        tab.appendChild(createIcon(t.iconName, 14));
+                    } else {
+                        tab.textContent = t.icon;
+                    }
+                    tab.title = t.id;
+                    tab.onclick = (e) => {
+                        e.stopPropagation();
+                        this._activeTab = t.id;
+                        this._switchTabContent(pane, tabs);
+                    };
+                    tabBar.appendChild(tab);
+                });
+                pane.appendChild(tabBar);
+            }
+
+            const content = document.createElement('div');
+            content.id = 'g-details-content';
+            pane.appendChild(content);
         }
 
-        // Render content for active tab
+        this._switchTabContent(pane, tabs);
+    },
+
+    _switchTabContent(pane, tabs) {
+        const content = document.getElementById('g-details-content') || pane;
+        content.replaceChildren();
+
+        // Update tab bar active states (without rebuilding)
+        const tabBar = document.getElementById('g-details-tab-bar');
+        if (tabBar) {
+            tabBar.querySelectorAll('.details-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tabId === this._activeTab);
+            });
+        }
+
+        // Render active tab content
         if (this._activeTab === 'stats') {
-            this._renderStatsTab(pane);
+            this._renderStatsTab(content);
         } else {
             const mod = ModuleRegistry.modules[this._activeTab];
             if (mod && typeof mod.renderToDetailsPane === 'function') {
-                mod.renderToDetailsPane(pane);
+                mod.renderToDetailsPane(content);
             }
         }
     },
