@@ -801,7 +801,9 @@ export const PanelUI = {
         return row;
     },
 
-    // --- UI 更新 ---
+    // --- UI 更新 (with dirty-checking) ---
+    _prev: {},
+
     update() {
         const cm = CounterModule;
         const user = Core.getCurrentUser();
@@ -816,48 +818,13 @@ export const PanelUI = {
         const quotaLabel = document.getElementById('g-quota-label');
         if (!bigDisplay) return;
 
-        // Capsule
+        const p = this._prev;
+
+        // --- Compute all values first ---
         const isMe = inspecting === user;
         const displayName = inspecting === TEMP_USER ? 'Guest' : inspecting.split('@')[0];
-
-        capsule.replaceChildren();
-        const dot = document.createElement('div');
-        dot.className = 'user-avatar-dot';
-        const name = document.createElement('span');
-        name.textContent = displayName;
-        name.style.overflow = 'hidden';
-        name.style.textOverflow = 'ellipsis';
-        name.style.whiteSpace = 'nowrap';
-        capsule.appendChild(dot);
-        capsule.appendChild(name);
-
-        // Account badge inline (next to username)
-        if (cm.accountType && cm.accountType !== 'free') {
-            const acctBadgeInline = document.createElement('span');
-            acctBadgeInline.className = 'acct-badge-inline';
-            acctBadgeInline.dataset.tier = cm.accountType;
-            const acctLabels = { free: 'Free', pro: 'Pro', ultra: 'Ultra' };
-            acctBadgeInline.textContent = acctLabels[cm.accountType] || 'Free';
-            acctBadgeInline.title = 'Account Tier';
-            capsule.appendChild(acctBadgeInline);
-        }
-
-        if (!isMe) {
-            capsule.classList.add('viewing-other');
-            capsule.title = "Viewing other user (Read Only)";
-        } else {
-            capsule.classList.remove('viewing-other');
-            capsule.title = "Active User";
-        }
-
-        // Model & Account badges
-        if (modelBadge) {
-            const mc = cm.MODEL_CONFIG[cm.currentModel];
-            if (!mc) return;
-            modelBadge.textContent = mc.label;
-            modelBadge.style.background = mc.color;
-            modelBadge.style.color = cm.currentModel === 'flash' ? '#000' : '#fff';
-        }
+        const accountType = cm.accountType || 'free';
+        const modelKey = cm.currentModel;
 
         let val = 0, sub = "", btn = "Reset";
         let disableBtn = !isMe;
@@ -887,45 +854,104 @@ export const PanelUI = {
             btn = "Clear History";
         }
 
-        // Bump animation
-        const numericVal = typeof val === 'number' ? val : -1;
-        if (numericVal !== cm.lastDisplayedVal && cm.lastDisplayedVal !== -1 && numericVal > cm.lastDisplayedVal) {
-            bigDisplay.classList.remove('bump');
-            void bigDisplay.offsetWidth;
-            bigDisplay.classList.add('bump');
-        }
-        cm.lastDisplayedVal = numericVal;
+        const used = cm.getTodayMessages();
+        const weighted = cm.getWeightedQuota();
+        const quotaPct = cm.quotaLimit > 0 ? Math.min((weighted / cm.quotaLimit) * 100, 100) : 0;
+        const quotaColor = quotaPct < 60 ? QUOTA_COLORS.safe : quotaPct < 85 ? QUOTA_COLORS.warn : QUOTA_COLORS.danger;
+        const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
+        const quotaText = `${used} msgs (${weightedStr} weighted) / ${cm.quotaLimit}`;
+        const resetStep = cm.state.resetStep;
 
-        bigDisplay.textContent = val;
-        subInfo.textContent = sub;
+        // --- Write DOM only for changed values ---
+
+        // Capsule (most expensive — replaceChildren)
+        if (p.displayName !== displayName || p.isMe !== isMe || p.accountType !== accountType) {
+            capsule.replaceChildren();
+            const dot = document.createElement('div');
+            dot.className = 'user-avatar-dot';
+            const name = document.createElement('span');
+            name.textContent = displayName;
+            name.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            capsule.appendChild(dot);
+            capsule.appendChild(name);
+
+            if (accountType !== 'free') {
+                const badge = document.createElement('span');
+                badge.className = 'acct-badge-inline';
+                badge.dataset.tier = accountType;
+                badge.textContent = accountType === 'ultra' ? 'Ultra' : 'Pro';
+                badge.title = 'Account Tier';
+                capsule.appendChild(badge);
+            }
+
+            capsule.classList.toggle('viewing-other', !isMe);
+            capsule.title = isMe ? "Active User" : "Viewing other user (Read Only)";
+            p.displayName = displayName;
+            p.isMe = isMe;
+            p.accountType = accountType;
+        }
+
+        // Model badge
+        if (p.modelKey !== modelKey && modelBadge) {
+            const mc = cm.MODEL_CONFIG[modelKey];
+            if (!mc) return;
+            modelBadge.textContent = mc.label;
+            modelBadge.style.background = mc.color;
+            modelBadge.style.color = modelKey === 'flash' ? '#000' : '#fff';
+            p.modelKey = modelKey;
+        }
+
+        // Big number + sub info
+        if (p.val !== val) {
+            // Bump animation
+            const numericVal = typeof val === 'number' ? val : -1;
+            if (numericVal !== cm.lastDisplayedVal && cm.lastDisplayedVal !== -1 && numericVal > cm.lastDisplayedVal) {
+                bigDisplay.classList.remove('bump');
+                void bigDisplay.offsetWidth;
+                bigDisplay.classList.add('bump');
+            }
+            cm.lastDisplayedVal = numericVal;
+            bigDisplay.textContent = val;
+            p.val = val;
+        }
+        if (p.sub !== sub) {
+            subInfo.textContent = sub;
+            p.sub = sub;
+        }
 
         // Quota bar
         if (quotaFill && quotaLabel) {
-            const used = cm.getTodayMessages();
-            const weighted = cm.getWeightedQuota();
-            const pct = Math.min((weighted / cm.quotaLimit) * 100, 100);
-            quotaFill.style.width = pct + '%';
-            if (pct < 60) quotaFill.style.background = QUOTA_COLORS.safe;
-            else if (pct < 85) quotaFill.style.background = QUOTA_COLORS.warn;
-            else quotaFill.style.background = QUOTA_COLORS.danger;
-            const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
-            quotaLabel.textContent = `${used} msgs (${weightedStr} weighted) / ${cm.quotaLimit}`;
+            if (p.quotaPct !== quotaPct || p.quotaColor !== quotaColor) {
+                quotaFill.style.width = quotaPct + '%';
+                quotaFill.style.background = quotaColor;
+                p.quotaPct = quotaPct;
+                p.quotaColor = quotaColor;
+            }
+            if (p.quotaText !== quotaText) {
+                quotaLabel.textContent = quotaText;
+                p.quotaText = quotaText;
+            }
         }
 
         // Action button
-        if (disableBtn) {
-            actionBtn.textContent = "View Only";
-            actionBtn.className = 'g-btn disabled';
-            actionBtn.disabled = true;
-        } else {
-            actionBtn.disabled = false;
-            if (cm.state.resetStep === 0) {
-                actionBtn.textContent = btn;
-                actionBtn.className = 'g-btn';
+        if (p.btn !== btn || p.disableBtn !== disableBtn || p.resetStep !== resetStep) {
+            if (disableBtn) {
+                actionBtn.textContent = "View Only";
+                actionBtn.className = 'g-btn disabled';
+                actionBtn.disabled = true;
             } else {
-                actionBtn.textContent = cm.state.resetStep === 1 ? "Sure?" : "Really?";
-                actionBtn.className = `g-btn danger-${cm.state.resetStep}`;
+                actionBtn.disabled = false;
+                if (resetStep === 0) {
+                    actionBtn.textContent = btn;
+                    actionBtn.className = 'g-btn';
+                } else {
+                    actionBtn.textContent = resetStep === 1 ? "Sure?" : "Really?";
+                    actionBtn.className = `g-btn danger-${resetStep}`;
+                }
             }
+            p.btn = btn;
+            p.disableBtn = disableBtn;
+            p.resetStep = resetStep;
         }
     },
 
