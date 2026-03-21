@@ -1,4 +1,5 @@
 import { GLOBAL_KEYS, QUOTA_COLORS, PANEL_ID, DEFAULT_POS, TEMP_USER, VERSION } from './constants.js';
+import { formatLocalDate } from '../lib/date_utils.js';
 import { createIcon } from './icons.js';
 import { GuidedTour } from './guided_tour.js';
 import { Logger, filterLogs, isDebugEnabled, setDebugEnabled } from './logger.js';
@@ -1973,7 +1974,7 @@ export const PanelUI = {
             const col = document.createElement('div');
             col.className = 'heatmap-col';
             for (let day = 0; day < 7; day++) {
-                const key = `${iterDate.getFullYear()}-${String(iterDate.getMonth()+1).padStart(2,'0')}-${String(iterDate.getDate()).padStart(2,'0')}`;
+                const key = formatLocalDate(iterDate);
                 const count = cm.state.dailyCounts[key]?.messages || 0;
 
                 const cell = document.createElement('div');
