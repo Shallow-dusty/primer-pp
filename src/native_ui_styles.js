@@ -1,13 +1,28 @@
 /**
  * Centralized CSS classes for native UI injections.
- * All injected elements use these classes instead of inline style.cssText.
- * Classes use CSS custom properties from the theme system for auto-theming.
+ *
+ * IMPORTANT: These elements are injected INTO Gemini's native UI (sidebar,
+ * input area, chat header) — they must match Gemini's own colors, NOT the
+ * floating panel's theme. Therefore we use hardcoded Gemini-native colors
+ * instead of CSS custom properties from the theme system.
+ *
+ * Only the floating panel, modals, and toast use theme CSS vars.
  */
+
+/* Gemini native color palette (dark mode) */
+const GEMINI = {
+    textMain: '#e8eaed',
+    textSub: '#9aa0a6',
+    hoverBg: 'rgba(255,255,255,0.06)',
+    accent: '#8ab4f8',
+    border: 'rgba(255,255,255,0.08)',
+    badgeBg: 'rgba(255,255,255,0.06)',
+};
 
 export function injectNativeUIStyles() {
     GM_addStyle(`
         /* ============================================ */
-        /* Sidebar injections                           */
+        /* Sidebar injections (Gemini-native colors)    */
         /* ============================================ */
 
         .gc-filter-bar {
@@ -34,7 +49,7 @@ export function injectNativeUIStyles() {
             cursor: pointer;
             border: none;
             background: transparent;
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
             font-weight: 400;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             line-height: 1.4;
@@ -42,8 +57,8 @@ export function injectNativeUIStyles() {
             opacity: 0.7;
         }
         .gc-filter-tab:hover {
-            background: rgba(255,255,255,0.06);
-            color: var(--text-main, #e8eaed);
+            background: ${GEMINI.hoverBg};
+            color: ${GEMINI.textMain};
             opacity: 1;
         }
         .gc-filter-tab.active {
@@ -61,7 +76,7 @@ export function injectNativeUIStyles() {
         .gc-sidebar-btn {
             background: transparent;
             border: none;
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
             border-radius: 14px;
             padding: 5px 14px;
             font-size: 12px;
@@ -72,8 +87,8 @@ export function injectNativeUIStyles() {
             opacity: 0.6;
         }
         .gc-sidebar-btn:hover {
-            color: var(--text-main, #e8eaed);
-            background: rgba(255,255,255,0.06);
+            color: ${GEMINI.textMain};
+            background: ${GEMINI.hoverBg};
             opacity: 1;
         }
         .gc-sidebar-btn.full-width {
@@ -96,7 +111,7 @@ export function injectNativeUIStyles() {
 
         .gc-count-label {
             font-size: 11px;
-            color: var(--accent, #8ab4f8);
+            color: ${GEMINI.accent};
             flex: 1;
             text-align: center;
             font-weight: 500;
@@ -106,7 +121,7 @@ export function injectNativeUIStyles() {
             width: 16px;
             height: 16px;
             border-radius: 4px;
-            border: 2px solid var(--text-sub, #5f6368);
+            border: 2px solid #5f6368;
             background: transparent;
             flex-shrink: 0;
             display: inline-flex;
@@ -120,12 +135,12 @@ export function injectNativeUIStyles() {
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .gc-batch-check[data-checked="true"] {
-            border-color: var(--accent, #8ab4f8);
-            background: var(--accent, #8ab4f8);
+            border-color: ${GEMINI.accent};
+            background: ${GEMINI.accent};
         }
 
         /* ============================================ */
-        /* Input area injections                        */
+        /* Input area injections (Gemini-native colors) */
         /* ============================================ */
 
         .gc-input-btn {
@@ -139,11 +154,11 @@ export function injectNativeUIStyles() {
             align-items: center;
             justify-content: center;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
         }
         .gc-input-btn:hover {
-            background: var(--row-hover, rgba(128,128,128,0.15));
-            color: var(--text-main, #e8eaed);
+            background: rgba(128,128,128,0.15);
+            color: ${GEMINI.textMain};
         }
         .gc-input-btn:active {
             transform: scale(0.92);
@@ -163,11 +178,11 @@ export function injectNativeUIStyles() {
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: var(--text-sub, #555);
+            background: #555;
             transition: background 0.3s;
         }
         .gc-tweaks-dot.on {
-            background: var(--accent, #8ab4f8);
+            background: ${GEMINI.accent};
             animation: gcDotPulse 2.5s infinite;
         }
         @keyframes gcDotPulse {
@@ -180,18 +195,18 @@ export function injectNativeUIStyles() {
             bottom: 8px;
             right: 36px;
             font-size: 11px;
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
             opacity: 0.6;
             pointer-events: none;
             z-index: 1;
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            background: var(--btn-bg, rgba(255,255,255,0.06));
+            background: ${GEMINI.badgeBg};
             padding: 2px 6px;
             border-radius: 4px;
         }
 
         /* ============================================ */
-        /* Chat header injections                       */
+        /* Chat header injections (Gemini-native colors)*/
         /* ============================================ */
 
         .gc-header-btn {
@@ -206,7 +221,7 @@ export function injectNativeUIStyles() {
             justify-content: center;
             opacity: 0.7;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
         }
         .gc-header-btn:hover {
             opacity: 1;
@@ -217,15 +232,15 @@ export function injectNativeUIStyles() {
         }
 
         /* ============================================ */
-        /* Model lock indicator                         */
+        /* Model lock indicator (Gemini-native)         */
         /* ============================================ */
 
         .gc-model-lock {
             font-size: 11px;
             padding: 1px 5px;
             border-radius: 4px;
-            background: var(--badge-bg, rgba(255,255,255,0.06));
-            color: var(--text-sub, #9aa0a6);
+            background: ${GEMINI.badgeBg};
+            color: ${GEMINI.textSub};
             margin-left: 4px;
             cursor: default;
             user-select: none;
@@ -235,13 +250,13 @@ export function injectNativeUIStyles() {
         }
 
         /* ============================================ */
-        /* Quote reply FAB                              */
+        /* Quote reply FAB (Gemini-native accent)       */
         /* ============================================ */
 
         .gc-quote-fab {
             position: fixed;
             z-index: 2147483646;
-            background: var(--accent, #8ab4f8);
+            background: ${GEMINI.accent};
             color: #fff;
             padding: 5px 12px;
             border-radius: 16px;
@@ -261,7 +276,8 @@ export function injectNativeUIStyles() {
         }
 
         /* ============================================ */
-        /* Toast notification                           */
+        /* Toast notification (uses theme vars — OK     */
+        /* because toast floats independently)          */
         /* ============================================ */
 
         .gc-toast {

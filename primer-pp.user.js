@@ -6733,7 +6733,7 @@
   function injectNativeUIStyles() {
     GM_addStyle(`
         /* ============================================ */
-        /* Sidebar injections                           */
+        /* Sidebar injections (Gemini-native colors)    */
         /* ============================================ */
 
         .gc-filter-bar {
@@ -6760,7 +6760,7 @@
             cursor: pointer;
             border: none;
             background: transparent;
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
             font-weight: 400;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             line-height: 1.4;
@@ -6768,8 +6768,8 @@
             opacity: 0.7;
         }
         .gc-filter-tab:hover {
-            background: rgba(255,255,255,0.06);
-            color: var(--text-main, #e8eaed);
+            background: ${GEMINI.hoverBg};
+            color: ${GEMINI.textMain};
             opacity: 1;
         }
         .gc-filter-tab.active {
@@ -6787,7 +6787,7 @@
         .gc-sidebar-btn {
             background: transparent;
             border: none;
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
             border-radius: 14px;
             padding: 5px 14px;
             font-size: 12px;
@@ -6798,8 +6798,8 @@
             opacity: 0.6;
         }
         .gc-sidebar-btn:hover {
-            color: var(--text-main, #e8eaed);
-            background: rgba(255,255,255,0.06);
+            color: ${GEMINI.textMain};
+            background: ${GEMINI.hoverBg};
             opacity: 1;
         }
         .gc-sidebar-btn.full-width {
@@ -6822,7 +6822,7 @@
 
         .gc-count-label {
             font-size: 11px;
-            color: var(--accent, #8ab4f8);
+            color: ${GEMINI.accent};
             flex: 1;
             text-align: center;
             font-weight: 500;
@@ -6832,7 +6832,7 @@
             width: 16px;
             height: 16px;
             border-radius: 4px;
-            border: 2px solid var(--text-sub, #5f6368);
+            border: 2px solid #5f6368;
             background: transparent;
             flex-shrink: 0;
             display: inline-flex;
@@ -6846,12 +6846,12 @@
             transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .gc-batch-check[data-checked="true"] {
-            border-color: var(--accent, #8ab4f8);
-            background: var(--accent, #8ab4f8);
+            border-color: ${GEMINI.accent};
+            background: ${GEMINI.accent};
         }
 
         /* ============================================ */
-        /* Input area injections                        */
+        /* Input area injections (Gemini-native colors) */
         /* ============================================ */
 
         .gc-input-btn {
@@ -6865,11 +6865,11 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
         }
         .gc-input-btn:hover {
-            background: var(--row-hover, rgba(128,128,128,0.15));
-            color: var(--text-main, #e8eaed);
+            background: rgba(128,128,128,0.15);
+            color: ${GEMINI.textMain};
         }
         .gc-input-btn:active {
             transform: scale(0.92);
@@ -6889,11 +6889,11 @@
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: var(--text-sub, #555);
+            background: #555;
             transition: background 0.3s;
         }
         .gc-tweaks-dot.on {
-            background: var(--accent, #8ab4f8);
+            background: ${GEMINI.accent};
             animation: gcDotPulse 2.5s infinite;
         }
         @keyframes gcDotPulse {
@@ -6906,18 +6906,18 @@
             bottom: 8px;
             right: 36px;
             font-size: 11px;
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
             opacity: 0.6;
             pointer-events: none;
             z-index: 1;
             font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-            background: var(--btn-bg, rgba(255,255,255,0.06));
+            background: ${GEMINI.badgeBg};
             padding: 2px 6px;
             border-radius: 4px;
         }
 
         /* ============================================ */
-        /* Chat header injections                       */
+        /* Chat header injections (Gemini-native colors)*/
         /* ============================================ */
 
         .gc-header-btn {
@@ -6932,7 +6932,7 @@
             justify-content: center;
             opacity: 0.7;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-sub, #9aa0a6);
+            color: ${GEMINI.textSub};
         }
         .gc-header-btn:hover {
             opacity: 1;
@@ -6943,15 +6943,15 @@
         }
 
         /* ============================================ */
-        /* Model lock indicator                         */
+        /* Model lock indicator (Gemini-native)         */
         /* ============================================ */
 
         .gc-model-lock {
             font-size: 11px;
             padding: 1px 5px;
             border-radius: 4px;
-            background: var(--badge-bg, rgba(255,255,255,0.06));
-            color: var(--text-sub, #9aa0a6);
+            background: ${GEMINI.badgeBg};
+            color: ${GEMINI.textSub};
             margin-left: 4px;
             cursor: default;
             user-select: none;
@@ -6961,13 +6961,13 @@
         }
 
         /* ============================================ */
-        /* Quote reply FAB                              */
+        /* Quote reply FAB (Gemini-native accent)       */
         /* ============================================ */
 
         .gc-quote-fab {
             position: fixed;
             z-index: 2147483646;
-            background: var(--accent, #8ab4f8);
+            background: ${GEMINI.accent};
             color: #fff;
             padding: 5px 12px;
             border-radius: 16px;
@@ -6987,7 +6987,8 @@
         }
 
         /* ============================================ */
-        /* Toast notification                           */
+        /* Toast notification (uses theme vars — OK     */
+        /* because toast floats independently)          */
         /* ============================================ */
 
         .gc-toast {
@@ -7015,8 +7016,17 @@
         }
     `);
   }
+  var GEMINI;
   var init_native_ui_styles = __esm({
     "src/native_ui_styles.js"() {
+      GEMINI = {
+        textMain: "#e8eaed",
+        textSub: "#9aa0a6",
+        hoverBg: "rgba(255,255,255,0.06)",
+        accent: "#8ab4f8",
+        border: "rgba(255,255,255,0.08)",
+        badgeBg: "rgba(255,255,255,0.06)"
+      };
     }
   });
 
