@@ -1,0 +1,6733 @@
+// ==UserScript==
+// @name         Gemini Primer++ (v10.17)
+// @namespace    http://tampermonkey.net/
+// @version      10.17
+// @description  模块化架构：可扩展的 Gemini 助手平台 - 原生 UI 集成 + 模块引导 + 计数器 + 热力图 + 配额追踪 + 对话文件夹 (Pure Enhancement)
+// @author       Script Weaver
+// @match        https://gemini.google.com/*
+// @grant        GM_addStyle
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @grant        GM_listValues
+// @grant        GM_addValueChangeListener
+// @grant        GM_removeValueChangeListener
+// @grant        GM_registerMenuCommand
+// @run-at       document-idle
+// ==/UserScript==
+(() => {
+  var __create = Object.create;
+  var __defProp = Object.defineProperty;
+  var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __getProtoOf = Object.getPrototypeOf;
+  var __hasOwnProp = Object.prototype.hasOwnProperty;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  };
+  var __commonJS = (cb, mod) => function __require() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  };
+  var __copyProps = (to, from, except, desc) => {
+    if (from && typeof from === "object" || typeof from === "function") {
+      for (let key of __getOwnPropNames(from))
+        if (!__hasOwnProp.call(to, key) && key !== except)
+          __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+    }
+    return to;
+  };
+  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+    // If the importer is in node compatibility mode or this is not an ESM
+    // file that has been converted to a CommonJS file using a Babel-
+    // compatible transform (i.e. "__esModule" has not been set), then set
+    // "default" to the CommonJS "module.exports" for node compatibility.
+    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+    mod
+  ));
+
+  // src/constants.js
+  var THEMES, GLOBAL_KEYS, TIMINGS, QUOTA_COLORS, VERSION, PANEL_ID, DEFAULT_POS, TEMP_USER;
+  var init_constants = __esm({
+    "src/constants.js"() {
+      THEMES = {
+        auto: {
+          name: "🔄 Auto",
+          vars: null
+          // resolved at runtime → glass (dark) / paper (light)
+        },
+        glass: {
+          name: "🌌 Glass",
+          vars: {
+            "--bg": "rgba(32, 33, 36, 0.82)",
+            "--blur": "24px",
+            "--saturate": "180%",
+            "--border": "rgba(255, 255, 255, 0.12)",
+            "--border-highlight": "inset 1px 1px 1px rgba(255,255,255,0.08)",
+            "--text-main": "#a8c7fa",
+            "--text-sub": "#9aa0a6",
+            "--accent": "#8ab4f8",
+            "--btn-bg": "rgba(255, 255, 255, 0.06)",
+            "--row-hover": "rgba(255, 255, 255, 0.1)",
+            "--shadow": "0 4px 12px rgba(0,0,0,0.1), 0 12px 32px rgba(0,0,0,0.25), 0 24px 64px rgba(0,0,0,0.2)",
+            "--shadow-hover": "0 8px 24px rgba(0,0,0,0.15), 0 16px 48px rgba(0,0,0,0.3), 0 32px 80px rgba(0,0,0,0.25)",
+            "--highlight": "rgba(255, 255, 255, 0.12)",
+            "--header-bg": "rgba(255, 255, 255, 0.03)",
+            "--header-border": "rgba(255, 255, 255, 0.05)",
+            "--detail-bg": "rgba(0, 0, 0, 0.1)",
+            "--overlay-tint": "rgba(0, 0, 0, 0.6)",
+            "--input-bg": "rgba(255, 255, 255, 0.05)",
+            "--divider": "rgba(255, 255, 255, 0.05)",
+            "--badge-bg": "rgba(255, 255, 255, 0.06)",
+            "--scrollbar-thumb": "rgba(255, 255, 255, 0.15)",
+            "--code-bg": "rgba(0, 0, 0, 0.3)"
+          }
+        },
+        cyber: {
+          name: "⚡ Cyber",
+          vars: {
+            "--bg": "rgba(10, 10, 10, 0.96)",
+            "--blur": "4px",
+            "--saturate": "120%",
+            "--border": "#00ff41",
+            "--border-highlight": "inset 1px 1px 0 rgba(0,255,65,0.15)",
+            "--text-main": "#00ff41",
+            "--text-sub": "#008F11",
+            "--accent": "#00ff41",
+            "--btn-bg": "#0d0d0d",
+            "--row-hover": "#1a1a1a",
+            "--shadow": "0 4px 12px rgba(0,255,65,0.1), 0 12px 32px rgba(0,255,65,0.08)",
+            "--shadow-hover": "0 8px 24px rgba(0,255,65,0.15), 0 16px 48px rgba(0,255,65,0.12)",
+            "--highlight": "rgba(0, 255, 65, 0.1)",
+            "--header-bg": "rgba(0, 255, 65, 0.03)",
+            "--header-border": "rgba(0, 255, 65, 0.1)",
+            "--detail-bg": "rgba(0, 0, 0, 0.3)",
+            "--overlay-tint": "rgba(0, 0, 0, 0.7)",
+            "--input-bg": "#0d0d0d",
+            "--divider": "rgba(0, 255, 65, 0.08)",
+            "--badge-bg": "rgba(0, 255, 65, 0.08)",
+            "--scrollbar-thumb": "rgba(0, 255, 65, 0.2)",
+            "--code-bg": "rgba(0, 0, 0, 0.5)"
+          }
+        },
+        paper: {
+          name: "📄 Paper",
+          vars: {
+            "--bg": "rgba(255, 255, 255, 0.88)",
+            "--blur": "20px",
+            "--saturate": "150%",
+            "--border": "rgba(0, 0, 0, 0.08)",
+            "--border-highlight": "inset 1px 1px 0 rgba(255,255,255,0.8)",
+            "--text-main": "#1a1a1a",
+            "--text-sub": "#5f6368",
+            "--accent": "#1a73e8",
+            "--btn-bg": "rgba(0, 0, 0, 0.04)",
+            "--row-hover": "rgba(0, 0, 0, 0.06)",
+            "--shadow": "0 4px 16px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.04), 0 24px 64px rgba(0,0,0,0.04)",
+            "--shadow-hover": "0 8px 24px rgba(0,0,0,0.08), 0 16px 48px rgba(0,0,0,0.06), 0 32px 80px rgba(0,0,0,0.04)",
+            "--highlight": "rgba(255, 255, 255, 0.9)",
+            "--header-bg": "rgba(0, 0, 0, 0.02)",
+            "--header-border": "rgba(0, 0, 0, 0.06)",
+            "--detail-bg": "rgba(0, 0, 0, 0.03)",
+            "--overlay-tint": "rgba(0, 0, 0, 0.35)",
+            "--input-bg": "rgba(0, 0, 0, 0.04)",
+            "--divider": "rgba(0, 0, 0, 0.06)",
+            "--badge-bg": "rgba(0, 0, 0, 0.05)",
+            "--scrollbar-thumb": "rgba(0, 0, 0, 0.15)",
+            "--code-bg": "rgba(0, 0, 0, 0.04)"
+          }
+        }
+      };
+      GLOBAL_KEYS = {
+        POS: "gemini_panel_pos",
+        REGISTRY: "gemini_user_registry",
+        THEME: "gemini_current_theme",
+        RESET_HOUR: "gemini_reset_hour",
+        QUOTA: "gemini_quota_limit",
+        MODULES: "gemini_enabled_modules",
+        DEBUG: "gemini_debug_enabled",
+        LOG_LEVEL: "gemini_log_level",
+        LOGS: "gemini_logs_store",
+        ONBOARDING: "gemini_onboarding_seen",
+        ONBOARDING_LANG: "gemini_onboarding_lang",
+        TOUR_SEEN: "gemini_tour_seen"
+      };
+      TIMINGS = {
+        POLL_INTERVAL: 1500,
+        SLOW_POLL: 5e3,
+        COUNTER_COOLDOWN: 1e3,
+        OBSERVER_DEBOUNCE: 500,
+        NATIVEUI_DEBOUNCE: 1500,
+        TITLE_DEBOUNCE: 300,
+        FAB_AUTO_DISMISS: 5e3,
+        MODEL_MENU_TIMEOUT: 2e3,
+        MODEL_MUTATION_DEBOUNCE: 500
+      };
+      QUOTA_COLORS = { safe: "#34a853", warn: "#fbbc04", danger: "#ea4335" };
+      VERSION = "10.17";
+      PANEL_ID = "gemini-monitor-panel-v7";
+      DEFAULT_POS = { top: "20px", left: "auto", bottom: "auto", right: "220px" };
+      TEMP_USER = "Guest";
+    }
+  });
+
+  // lib/debug_logger.js
+  var require_debug_logger = __commonJS({
+    "lib/debug_logger.js"(exports, module) {
+      "use strict";
+      function createLogger2(options) {
+        const LEVELS = { error: 0, warn: 1, info: 2, debug: 3 };
+        const maxEntries = options?.maxEntries ?? 300;
+        const maxStore = options?.maxStore ?? 500;
+        let level = options?.level ?? "info";
+        const store = options?.store ?? { get: () => [], set: () => {
+        } };
+        let buffer = Array.isArray(options?.initial) ? options.initial.slice() : Array.isArray(store.get()) ? store.get() : [];
+        const subscribers = /* @__PURE__ */ new Set();
+        let persistTimer = null;
+        const onLevelChange = options?.onLevelChange ?? (() => {
+        });
+        const now = options?.now ?? (() => (/* @__PURE__ */ new Date()).toISOString());
+        const sink = options?.sink ?? (() => {
+        });
+        function shouldLog(lvl) {
+          return (LEVELS[lvl] ?? 2) <= (LEVELS[level] ?? 2);
+        }
+        function persist() {
+          if (persistTimer) clearTimeout(persistTimer);
+          persistTimer = setTimeout(() => {
+            const trimmed = buffer.slice(-maxStore);
+            store.set(trimmed);
+          }, 0);
+        }
+        function emit(entry) {
+          buffer.push(entry);
+          if (buffer.length > maxEntries) buffer.shift();
+          persist();
+          subscribers.forEach((fn) => {
+            try {
+              fn(entry);
+            } catch (_) {
+            }
+          });
+        }
+        function log(lvl, msg, data) {
+          const entry = { ts: now(), level: lvl, msg, data };
+          if (shouldLog(lvl)) {
+            sink(lvl, msg, data);
+          }
+          emit(entry);
+        }
+        return {
+          log,
+          error: (m, d) => log("error", m, d),
+          warn: (m, d) => log("warn", m, d),
+          info: (m, d) => log("info", m, d),
+          debug: (m, d) => log("debug", m, d),
+          getLevel: () => level,
+          setLevel: (lvl) => {
+            level = lvl;
+            onLevelChange(lvl);
+            log("info", "Log level updated", { level: lvl });
+          },
+          getEntries: () => buffer.slice(),
+          clear: () => {
+            buffer = [];
+            store.set([]);
+            log("info", "Logs cleared");
+          },
+          subscribe: (fn) => {
+            subscribers.add(fn);
+            return () => subscribers.delete(fn);
+          },
+          export: () => ({ exportedAt: now(), level, entries: buffer.slice() })
+        };
+      }
+      function filterLogs2(entries, opts) {
+        const level = opts?.level ?? "all";
+        const term = (opts?.term ?? "").toLowerCase();
+        return entries.filter((e) => {
+          if (level !== "all" && e.level !== level) return false;
+          if (!term) return true;
+          const dataStr = e.data ? JSON.stringify(e.data) : "";
+          return `${e.msg} ${dataStr}`.toLowerCase().includes(term);
+        });
+      }
+      module.exports = { createLogger: createLogger2, filterLogs: filterLogs2 };
+    }
+  });
+
+  // src/logger.js
+  function isDebugEnabled() {
+    try {
+      return GM_getValue(GLOBAL_KEYS.DEBUG, false);
+    } catch (e) {
+      return false;
+    }
+  }
+  function setDebugEnabled(v) {
+    try {
+      GM_setValue(GLOBAL_KEYS.DEBUG, v);
+    } catch (e) {
+    }
+  }
+  var import_debug_logger, _initLevel, Logger;
+  var init_logger = __esm({
+    "src/logger.js"() {
+      import_debug_logger = __toESM(require_debug_logger());
+      init_constants();
+      try {
+        _initLevel = GM_getValue(GLOBAL_KEYS.LOG_LEVEL, "info");
+      } catch (e) {
+        _initLevel = "info";
+      }
+      Logger = (0, import_debug_logger.createLogger)({
+        level: _initLevel,
+        store: {
+          get: () => {
+            try {
+              return GM_getValue(GLOBAL_KEYS.LOGS, []);
+            } catch (e) {
+              return [];
+            }
+          },
+          set: (v) => {
+            try {
+              GM_setValue(GLOBAL_KEYS.LOGS, v);
+            } catch (e) {
+            }
+          }
+        },
+        onLevelChange: (lvl) => {
+          try {
+            GM_setValue(GLOBAL_KEYS.LOG_LEVEL, lvl);
+          } catch (e) {
+          }
+        },
+        sink: (lvl, msg, data) => {
+          const fn = lvl === "error" ? console.error : lvl === "warn" ? console.warn : lvl === "debug" ? console.debug : console.log;
+          fn(`[Gemini] ${msg}`, data || "");
+        }
+      });
+      Logger.info("Logger initialized", { level: Logger.getLevel() });
+    }
+  });
+
+  // src/state.js
+  function getCurrentUser() {
+    return currentUser;
+  }
+  function setCurrentUser(u) {
+    currentUser = u;
+  }
+  function getInspectingUser() {
+    return inspectingUser;
+  }
+  function setInspectingUser(u) {
+    inspectingUser = u;
+  }
+  function getCurrentTheme() {
+    return currentTheme;
+  }
+  function setCurrentTheme(t) {
+    currentTheme = t;
+  }
+  function getStorageListenerId() {
+    return storageListenerId;
+  }
+  function setStorageListenerId(id) {
+    storageListenerId = id;
+  }
+  var currentUser, inspectingUser, currentTheme, storageListenerId;
+  var init_state = __esm({
+    "src/state.js"() {
+      init_constants();
+      currentUser = TEMP_USER;
+      inspectingUser = TEMP_USER;
+      try {
+        currentTheme = GM_getValue(GLOBAL_KEYS.THEME, "glass");
+      } catch (e) {
+        currentTheme = "glass";
+      }
+      storageListenerId = null;
+    }
+  });
+
+  // src/core.js
+  var Core;
+  var init_core = __esm({
+    "src/core.js"() {
+      init_constants();
+      init_state();
+      Core = {
+        // --- User management ---
+        registerUser(userId) {
+          if (!userId || userId === TEMP_USER || !userId.includes("@")) return;
+          let registry;
+          try {
+            registry = GM_getValue(GLOBAL_KEYS.REGISTRY, []);
+          } catch (e) {
+            registry = [];
+          }
+          if (!registry.includes(userId)) {
+            registry.push(userId);
+            try {
+              GM_setValue(GLOBAL_KEYS.REGISTRY, registry);
+            } catch (e) {
+            }
+          }
+        },
+        getAllUsers() {
+          try {
+            return GM_getValue(GLOBAL_KEYS.REGISTRY, []);
+          } catch (e) {
+            return [];
+          }
+        },
+        detectUser() {
+          try {
+            const candidates = document.querySelectorAll('a[aria-label*="@"], button[aria-label*="@"], div[aria-label*="帐号"], div[aria-label*="Account"], img[alt*="@"], img[aria-label*="@"]');
+            for (let el of candidates) {
+              const label = el.getAttribute("aria-label") || el.getAttribute("alt") || "";
+              const match = label.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/);
+              if (match && match[1]) return match[1];
+            }
+          } catch (e) {
+          }
+          return null;
+        },
+        getCurrentUser() {
+          return getCurrentUser();
+        },
+        getInspectingUser() {
+          return getInspectingUser();
+        },
+        setInspectingUser(user) {
+          setInspectingUser(user);
+        },
+        getTempUser() {
+          return TEMP_USER;
+        },
+        // --- Theme management ---
+        _autoThemeQuery: null,
+        _autoThemeHandler: null,
+        /** Resolve 'auto' to a concrete theme key based on system preference */
+        resolveTheme(key) {
+          if (key !== "auto") return key;
+          try {
+            return window.matchMedia("(prefers-color-scheme: light)").matches ? "paper" : "glass";
+          } catch (e) {
+            return "glass";
+          }
+        },
+        getTheme() {
+          return getCurrentTheme();
+        },
+        setTheme(key) {
+          if (THEMES[key]) {
+            setCurrentTheme(key);
+            try {
+              GM_setValue(GLOBAL_KEYS.THEME, key);
+            } catch (e) {
+            }
+            this._updateAutoListener(key);
+          }
+        },
+        getThemes() {
+          return THEMES;
+        },
+        applyTheme(el, themeKey) {
+          if (!el) return;
+          const resolved = this.resolveTheme(themeKey);
+          if (!THEMES[resolved]) return;
+          const vars = THEMES[resolved].vars;
+          for (const [key, val] of Object.entries(vars)) {
+            el.style.setProperty(key, val);
+          }
+        },
+        /** Start/stop matchMedia listener for auto theme */
+        _updateAutoListener(key) {
+          if (this._autoThemeQuery && this._autoThemeHandler) {
+            this._autoThemeQuery.removeEventListener("change", this._autoThemeHandler);
+            this._autoThemeQuery = null;
+            this._autoThemeHandler = null;
+          }
+          if (key !== "auto") return;
+          try {
+            this._autoThemeQuery = window.matchMedia("(prefers-color-scheme: light)");
+            this._autoThemeHandler = () => {
+              const panel = document.getElementById(PANEL_ID);
+              if (panel) this.applyTheme(panel, "auto");
+            };
+            this._autoThemeQuery.addEventListener("change", this._autoThemeHandler);
+          } catch (e) {
+          }
+        },
+        // --- Storage listener ---
+        setupStorageListener(targetUser, callback) {
+          const lid = getStorageListenerId();
+          if (lid) {
+            try {
+              GM_removeValueChangeListener(lid);
+            } catch (e) {
+            }
+            setStorageListenerId(null);
+          }
+          if (!targetUser || targetUser === TEMP_USER) return;
+          const storageKey = `gemini_store_${targetUser}`;
+          try {
+            const newId = GM_addValueChangeListener(storageKey, (name, oldVal, newVal, remote) => {
+              if (remote && newVal && callback) {
+                try {
+                  callback(newVal);
+                } catch (e) {
+                }
+              }
+            });
+            setStorageListenerId(newId);
+          } catch (e) {
+          }
+        },
+        // --- Shared utilities ---
+        sleep(ms) {
+          return new Promise((r) => setTimeout(r, ms));
+        },
+        scanSidebarChats() {
+          const items = [];
+          document.querySelectorAll('a[href*="/app/"]').forEach((el) => {
+            const href = el.getAttribute("href") || "";
+            const match = href.match(/\/app\/([a-zA-Z0-9\-_]+)/);
+            if (match) {
+              let title = "";
+              const textEl = el.querySelector("span, div");
+              if (textEl) title = textEl.textContent.trim();
+              if (!title) title = "Untitled";
+              items.push({ id: match[1], title, element: el, href });
+            }
+          });
+          return items;
+        },
+        // --- URL utilities ---
+        getChatId() {
+          try {
+            const match = window.location.pathname.match(/\/app\/([a-zA-Z0-9\-_]+)/);
+            return match ? match[1] : null;
+          } catch (e) {
+            return null;
+          }
+        },
+        // --- Date utilities ---
+        getDayKey(resetHour = 0) {
+          const now = /* @__PURE__ */ new Date();
+          if (now.getHours() < resetHour) {
+            now.setDate(now.getDate() - 1);
+          }
+          const y = now.getFullYear();
+          const m = String(now.getMonth() + 1).padStart(2, "0");
+          const day = String(now.getDate()).padStart(2, "0");
+          return `${y}-${m}-${day}`;
+        }
+      };
+    }
+  });
+
+  // src/native_ui.js
+  var NativeUI;
+  var init_native_ui = __esm({
+    "src/native_ui.js"() {
+      init_module_registry();
+      NativeUI = {
+        isZH: navigator.language.startsWith("zh"),
+        t(zh, en) {
+          return this.isZH ? zh : en;
+        },
+        _findFirst(selectors) {
+          for (const sel of selectors) {
+            const el = document.querySelector(sel);
+            if (el) return el;
+          }
+          return null;
+        },
+        // Dirty tracking: only re-inject modules when DOM structure changes
+        _dirtyModules: /* @__PURE__ */ new Set(),
+        _retryCount: {},
+        markAllDirty() {
+          ModuleRegistry.enabledModules.forEach((id) => {
+            this._dirtyModules.add(id);
+            delete this._retryCount[id];
+          });
+        },
+        markDirty(id) {
+          this._dirtyModules.add(id);
+          delete this._retryCount[id];
+        },
+        remove(id) {
+          const el = document.getElementById(id);
+          if (el) el.remove();
+        },
+        getSidebar() {
+          return this._findFirst([
+            ".sidenav-with-history-container",
+            "bard-sidenav",
+            'nav[role="navigation"]'
+          ]);
+        },
+        getInputArea() {
+          return this._findFirst([
+            "input-area-v2",
+            ".input-area-container",
+            ".bottom-container"
+          ]);
+        },
+        getChatHeader() {
+          return this._findFirst([
+            ".conversation-title-container",
+            "span.conversation-title",
+            "h1.conversation-title",
+            '[data-test-id="conversation-title"]'
+          ]);
+        },
+        getModelSwitch() {
+          return this._findFirst([
+            "button.input-area-switch",
+            '[data-test-id="bard-mode-menu-button"]'
+          ]);
+        },
+        // Called from onDOMStructureChange — only processes dirty modules
+        tick() {
+          if (this._dirtyModules.size === 0) return;
+          const toProcess = [...this._dirtyModules];
+          for (const id of toProcess) {
+            const mod = ModuleRegistry.modules[id];
+            if (typeof mod?.injectNativeUI === "function") {
+              try {
+                mod.injectNativeUI();
+                this._dirtyModules.delete(id);
+                delete this._retryCount[id];
+              } catch (e) {
+                this._retryCount[id] = (this._retryCount[id] || 0) + 1;
+                if (this._retryCount[id] >= 3) {
+                  this._dirtyModules.delete(id);
+                  delete this._retryCount[id];
+                }
+              }
+            } else {
+              this._dirtyModules.delete(id);
+            }
+          }
+        }
+      };
+    }
+  });
+
+  // src/icons.js
+  function createIcon(name, size = 16) {
+    const paths = PATHS[name];
+    if (!paths) return document.createTextNode(name);
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", String(size));
+    svg.setAttribute("height", String(size));
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.style.verticalAlign = "middle";
+    svg.style.flexShrink = "0";
+    for (const d of paths) {
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+    }
+    const dots = DOTS[name];
+    if (dots) {
+      for (const { cx, cy, r } of dots) {
+        const circle = document.createElementNS(NS, "circle");
+        circle.setAttribute("cx", String(cx));
+        circle.setAttribute("cy", String(cy));
+        circle.setAttribute("r", String(r));
+        circle.setAttribute("fill", "currentColor");
+        circle.setAttribute("stroke", "none");
+        svg.appendChild(circle);
+      }
+    }
+    return svg;
+  }
+  var NS, PATHS, DOTS;
+  var init_icons = __esm({
+    "src/icons.js"() {
+      NS = "http://www.w3.org/2000/svg";
+      PATHS = {
+        menu: ["M4 12h16", "M4 6h16", "M4 18h16"],
+        settings: [
+          "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
+          "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"
+        ],
+        chart: ["M18 20V10", "M12 20V4", "M6 20v-6"],
+        x: ["M18 6 6 18", "M6 6l12 12"],
+        download: [
+          "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",
+          "M7 10l5 5 5-5",
+          "M12 15V3"
+        ],
+        upload: [
+          "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",
+          "M17 8l-5-5-5 5",
+          "M12 3v12"
+        ],
+        trash: [
+          "M3 6h18",
+          "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6",
+          "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"
+        ],
+        folder: [
+          "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"
+        ],
+        gem: ["M6 3h12l4 6-10 13L2 9z", "M11 3l1 10", "M2 9h20"],
+        bot: [
+          "M12 8V4H8",
+          "M2 14a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z",
+          "M6 16a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+          "M18 16a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"
+        ],
+        quote: [
+          "M3 21c3 0 7-1 7-8V5c0-1.25-.76-2.017-2-2H5c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2z",
+          "M15 21c3 0 7-1 7-8V5c0-1.25-.76-2.017-2-2h-3c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2z"
+        ],
+        palette: [
+          "M12 22C6.5 22 2 17.5 2 12S6.5 2 12 2s10 4.5 10 10c0 .7-.07 1.38-.2 2.04a2.5 2.5 0 0 1-2.46 2.07c-.26 0-.5-.04-.74-.12A2.49 2.49 0 0 0 17 16a2.5 2.5 0 0 0-2.5 2.5c0 .69.28 1.31.73 1.76A9.93 9.93 0 0 1 12 22z"
+        ],
+        wrench: [
+          "M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+        ],
+        pin: [
+          "M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0",
+          "M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"
+        ],
+        bug: [
+          "M8 2l1.88 1.88",
+          "M14.12 3.88 16 2",
+          "M9 7.13v-1a3.003 3.003 0 1 1 6 0v1",
+          "M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6",
+          "M12 20v-9",
+          "M6.53 9C4.6 8.8 3 7.1 3 5",
+          "M6 13H2",
+          "M3 21c0-2.1 1.7-3.9 3.8-4",
+          "M20.97 5c0 2.1-1.6 3.8-3.5 4",
+          "M22 13h-4",
+          "M17.2 17c2.1.1 3.8 1.9 3.8 4"
+        ],
+        package: [
+          "M16.5 9.4 7.55 4.24",
+          "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z",
+          "M3.27 6.96 12 12.01l8.73-5.05",
+          "M12 22.08V12"
+        ],
+        info: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 16v-4", "M12 8h.01"],
+        refresh: [
+          "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8",
+          "M21 3v5h-5",
+          "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16",
+          "M8 16H3v5"
+        ],
+        lock: [
+          "M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z",
+          "M7 11V7a5 5 0 0 1 10 0v4"
+        ],
+        edit: ["M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"],
+        copy: [
+          "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2",
+          "M15 2H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1z"
+        ],
+        search: [
+          "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z",
+          "M21 21l-4.35-4.35"
+        ],
+        globe: [
+          "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z",
+          "M2 12h20",
+          "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+        ],
+        "file-text": [
+          "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z",
+          "M14 2v4a2 2 0 0 0 2 2h4",
+          "M10 9H8",
+          "M16 13H8",
+          "M16 17H8"
+        ],
+        compass: [
+          "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z",
+          "M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36z"
+        ]
+      };
+      DOTS = {
+        palette: [
+          { cx: 7.5, cy: 10.5, r: 1.5 },
+          { cx: 12, cy: 7.5, r: 1.5 },
+          { cx: 16.5, cy: 10.5, r: 1.5 }
+        ]
+      };
+    }
+  });
+
+  // src/guided_tour.js
+  var STEPS, GuidedTour;
+  var init_guided_tour = __esm({
+    "src/guided_tour.js"() {
+      init_constants();
+      init_native_ui();
+      STEPS = [
+        { sel: "#" + PANEL_ID, zh: "这是 Gemini Primer++ 控制面板，可拖拽移动", en: "This is the Gemini Primer++ control panel, drag to move" },
+        { sel: "#g-user-capsule", zh: "当前登录用户，点击可切换查看其他用户数据", en: "Current user, click to switch viewing other users" },
+        { sel: "#g-big-display", zh: "今日消息计数，实时更新", en: "Today's message count, updates in real-time" },
+        { sel: "#g-model-badge", zh: "当前模型显示（Flash/Thinking/Pro）", en: "Current model display (Flash/Thinking/Pro)" },
+        { sel: "#g-quota-wrap", zh: "配额进度条，可在设置中自定义上限", en: "Quota progress bar, customize limit in settings" },
+        { sel: "#g-action-btn", zh: "功能菜单：设置、仪表盘、导出等", en: "Action menu: settings, dashboard, export, etc." },
+        { sel: "#g-details-pane", zh: "详情区域，展示各模块的详细信息", en: "Details pane showing module-specific information" }
+      ];
+      GuidedTour = {
+        _current: 0,
+        _overlay: null,
+        _tooltip: null,
+        _onKey: null,
+        _onResize: null,
+        _onComplete: null,
+        hasSeen() {
+          try {
+            return !!GM_getValue(GLOBAL_KEYS.TOUR_SEEN, false);
+          } catch {
+            return false;
+          }
+        },
+        markSeen() {
+          try {
+            GM_setValue(GLOBAL_KEYS.TOUR_SEEN, true);
+          } catch {
+          }
+        },
+        start(onComplete) {
+          if (this._overlay) return;
+          this._onComplete = onComplete || null;
+          this._current = 0;
+          const ov = document.createElement("div");
+          ov.style.cssText = "position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646;pointer-events:none;border-radius:8px;transition:top .3s,left .3s,width .3s,height .3s,box-shadow .3s;";
+          document.body.appendChild(ov);
+          this._overlay = ov;
+          const tt = document.createElement("div");
+          tt.style.cssText = "position:fixed;z-index:2147483647;background:#1a1a2e;color:#e0e0e0;border:1px solid rgba(138,180,248,0.3);border-radius:10px;padding:14px 16px;max-width:280px;font-size:13px;line-height:1.5;box-shadow:0 8px 32px rgba(0,0,0,0.4);";
+          document.body.appendChild(tt);
+          this._tooltip = tt;
+          const blocker = document.createElement("div");
+          blocker.style.cssText = "position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483645;";
+          blocker.onclick = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          };
+          document.body.appendChild(blocker);
+          this._blocker = blocker;
+          this._onKey = (e) => {
+            if (e.key === "Escape") this.stop();
+            else if (e.key === "ArrowRight") this.next();
+            else if (e.key === "ArrowLeft") this.prev();
+          };
+          this._onResize = () => this._showStep(this._current);
+          document.addEventListener("keydown", this._onKey);
+          window.addEventListener("resize", this._onResize);
+          this._showStep(0);
+        },
+        stop() {
+          if (this._overlay) {
+            this._overlay.remove();
+            this._overlay = null;
+          }
+          if (this._tooltip) {
+            this._tooltip.remove();
+            this._tooltip = null;
+          }
+          if (this._blocker) {
+            this._blocker.remove();
+            this._blocker = null;
+          }
+          if (this._onKey) {
+            document.removeEventListener("keydown", this._onKey);
+            this._onKey = null;
+          }
+          if (this._onResize) {
+            window.removeEventListener("resize", this._onResize);
+            this._onResize = null;
+          }
+          this.markSeen();
+          const cb = this._onComplete;
+          this._onComplete = null;
+          if (cb) setTimeout(cb, 500);
+        },
+        next() {
+          if (this._current < STEPS.length - 1) this._showStep(++this._current);
+          else this.stop();
+        },
+        prev() {
+          if (this._current > 0) this._showStep(--this._current);
+        },
+        _showStep(i) {
+          const step = STEPS[i];
+          const el = document.querySelector(step.sel);
+          if (!el) {
+            this.next();
+            return;
+          }
+          const r = el.getBoundingClientRect();
+          const pad = 6;
+          const ov = this._overlay;
+          ov.style.top = r.top - pad + "px";
+          ov.style.left = r.left - pad + "px";
+          ov.style.width = r.width + pad * 2 + "px";
+          ov.style.height = r.height + pad * 2 + "px";
+          ov.style.boxShadow = "0 0 0 9999px rgba(0,0,0,0.6)";
+          const tt = this._tooltip;
+          tt.replaceChildren();
+          const text = document.createElement("div");
+          text.textContent = NativeUI.t(step.zh, step.en);
+          text.style.marginBottom = "12px";
+          tt.appendChild(text);
+          const nav = document.createElement("div");
+          nav.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;";
+          const counter = document.createElement("span");
+          counter.style.cssText = "font-size:11px;opacity:0.6;";
+          counter.textContent = `${i + 1} / ${STEPS.length}`;
+          nav.appendChild(counter);
+          const btnWrap = document.createElement("div");
+          btnWrap.style.cssText = "display:flex;gap:6px;";
+          const btnStyle = "padding:4px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;";
+          if (i > 0) {
+            const prevBtn = document.createElement("button");
+            prevBtn.style.cssText = btnStyle + "background:rgba(255,255,255,0.1);color:#e0e0e0;";
+            prevBtn.textContent = NativeUI.t("上一步", "Prev");
+            prevBtn.onclick = () => this.prev();
+            btnWrap.appendChild(prevBtn);
+          }
+          const skipBtn = document.createElement("button");
+          skipBtn.style.cssText = btnStyle + "background:rgba(255,255,255,0.1);color:#e0e0e0;";
+          skipBtn.textContent = NativeUI.t("跳过", "Skip");
+          skipBtn.onclick = () => this.stop();
+          btnWrap.appendChild(skipBtn);
+          const nextBtn = document.createElement("button");
+          nextBtn.style.cssText = btnStyle + "background:#8ab4f8;color:#1a1a2e;font-weight:600;";
+          nextBtn.textContent = i < STEPS.length - 1 ? NativeUI.t("下一步", "Next") : NativeUI.t("完成", "Done");
+          nextBtn.onclick = () => this.next();
+          btnWrap.appendChild(nextBtn);
+          nav.appendChild(btnWrap);
+          tt.appendChild(nav);
+          const gap = 12;
+          const ttRect = tt.getBoundingClientRect();
+          let top = r.bottom + gap + pad;
+          if (top + ttRect.height > window.innerHeight) {
+            top = r.top - pad - gap - ttRect.height;
+          }
+          let left = r.left + (r.width - ttRect.width) / 2;
+          left = Math.max(8, Math.min(left, window.innerWidth - ttRect.width - 8));
+          top = Math.max(8, top);
+          tt.style.top = top + "px";
+          tt.style.left = left + "px";
+        }
+      };
+    }
+  });
+
+  // lib/date_utils.js
+  var require_date_utils = __commonJS({
+    "lib/date_utils.js"(exports, module) {
+      "use strict";
+      function formatLocalDate(d) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${y}-${m}-${day}`;
+      }
+      function getDayKey(resetHour, now) {
+        const d = now ? new Date(now.getTime()) : /* @__PURE__ */ new Date();
+        if (d.getHours() < resetHour) {
+          d.setDate(d.getDate() - 1);
+        }
+        return formatLocalDate(d);
+      }
+      function getDayKeyForDate(date, resetHour) {
+        return getDayKey(resetHour, date);
+      }
+      function parseLocalDate(dateStr) {
+        const [y, m, d] = dateStr.split("-").map(Number);
+        return new Date(y, m - 1, d);
+      }
+      module.exports = { formatLocalDate, getDayKey, getDayKeyForDate, parseLocalDate };
+    }
+  });
+
+  // lib/counter_calc.js
+  var require_counter_calc = __commonJS({
+    "lib/counter_calc.js"(exports, module) {
+      "use strict";
+      var { formatLocalDate, getDayKey, parseLocalDate } = require_date_utils();
+      function calculateStreaks2(dailyCounts, resetHour, now) {
+        const dates = Object.keys(dailyCounts || {}).sort();
+        if (dates.length === 0) return { current: 0, best: 0 };
+        let best = 0, temp = 0, lastDate = null;
+        for (const dateStr of dates) {
+          if ((dailyCounts[dateStr].messages || 0) === 0) continue;
+          const d = parseLocalDate(dateStr);
+          if (lastDate) {
+            const diff = (d - lastDate) / (1e3 * 60 * 60 * 24);
+            if (Math.round(diff) === 1) temp++;
+            else if (diff > 1) temp = 1;
+          } else {
+            temp = 1;
+          }
+          if (temp > best) best = temp;
+          lastDate = d;
+        }
+        const ref = now ? new Date(now.getTime()) : /* @__PURE__ */ new Date();
+        const todayStr = getDayKey(resetHour, ref);
+        const yesterdayDate = new Date(ref.getTime());
+        if (yesterdayDate.getHours() < resetHour) yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayStr = formatLocalDate(yesterdayDate);
+        const startStr = dailyCounts[todayStr]?.messages > 0 ? todayStr : yesterdayStr;
+        let checkDate = parseLocalDate(startStr);
+        let current = 0;
+        while (true) {
+          const key = formatLocalDate(checkDate);
+          if (dailyCounts[key] && dailyCounts[key].messages > 0) {
+            current++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+        return { current, best };
+      }
+      function getLast7DaysData2(dailyCounts, resetHour, now) {
+        const result = [];
+        const ref = now || /* @__PURE__ */ new Date();
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(ref.getTime());
+          d.setDate(d.getDate() - i);
+          const key = getDayKey(resetHour || 0, d);
+          const [, m, day] = key.split("-");
+          result.push({
+            date: key,
+            label: `${parseInt(m)}/${parseInt(day)}`,
+            messages: (dailyCounts || {})[key]?.messages || 0
+          });
+        }
+        return result;
+      }
+      function ensureTodayEntry2(dailyCounts, todayKey) {
+        if (!dailyCounts[todayKey]) {
+          dailyCounts[todayKey] = { messages: 0, chats: 0, byModel: { flash: 0, thinking: 0, pro: 0 } };
+        }
+        if (!dailyCounts[todayKey].byModel) {
+          dailyCounts[todayKey].byModel = { flash: 0, thinking: 0, pro: 0 };
+        }
+        return todayKey;
+      }
+      module.exports = { calculateStreaks: calculateStreaks2, getLast7DaysData: getLast7DaysData2, ensureTodayEntry: ensureTodayEntry2 };
+    }
+  });
+
+  // src/modules/counter.js
+  var import_counter_calc, CounterModule;
+  var init_counter = __esm({
+    "src/modules/counter.js"() {
+      init_constants();
+      init_logger();
+      init_core();
+      init_module_registry();
+      init_panel_ui();
+      init_native_ui();
+      import_counter_calc = __toESM(require_counter_calc());
+      CounterModule = {
+        id: "counter",
+        name: NativeUI.t("消息计数器", "Message Counter"),
+        description: NativeUI.t("统计消息数量、热力图、配额追踪", "Message stats, heatmap & quota tracking"),
+        icon: "📊",
+        defaultEnabled: true,
+        // --- Module private constants ---
+        COOLDOWN: TIMINGS.COUNTER_COOLDOWN,
+        MODEL_CONFIG: {
+          flash: { label: "3 Flash", multiplier: 0, color: "#34a853" },
+          thinking: { label: "3 Flash Thinking", multiplier: 0.33, color: "#fbbc04" },
+          pro: { label: "3 Pro", multiplier: 1, color: "#ea4335" }
+        },
+        MODEL_DETECT_MAP: {
+          "Fast": "flash",
+          "Flash": "flash",
+          "flash": "flash",
+          "Thinking": "thinking",
+          "thinking": "thinking",
+          "Pro": "pro",
+          "pro": "pro",
+          "快速": "flash",
+          "思考": "thinking",
+          "专业": "pro",
+          "高速": "flash",
+          "プロ": "pro",
+          "빠른": "flash",
+          "사고": "thinking",
+          "프로": "pro"
+        },
+        // --- Module private state ---
+        resetHour: 0,
+        quotaLimit: 50,
+        currentModel: "flash",
+        accountType: "free",
+        lastDisplayedVal: -1,
+        lastCountTime: 0,
+        state: {
+          total: 0,
+          totalChatsCreated: 0,
+          chats: {},
+          dailyCounts: {},
+          viewMode: "today",
+          isExpanded: false,
+          resetStep: 0
+        },
+        // --- Lifecycle ---
+        init() {
+          try {
+            this.resetHour = GM_getValue(GLOBAL_KEYS.RESET_HOUR, 0);
+          } catch (e) {
+            this.resetHour = 0;
+          }
+          try {
+            this.quotaLimit = GM_getValue(GLOBAL_KEYS.QUOTA, 50);
+          } catch (e) {
+            this.quotaLimit = 50;
+          }
+          this.bindEvents();
+          Logger.info("CounterModule initialized");
+        },
+        destroy() {
+          if (this._boundKeyHandler) {
+            document.removeEventListener("keydown", this._boundKeyHandler, true);
+            this._boundKeyHandler = null;
+          }
+          if (this._boundClickHandler) {
+            document.removeEventListener("click", this._boundClickHandler, true);
+            this._boundClickHandler = null;
+          }
+          if (this._cidPoller) {
+            clearInterval(this._cidPoller);
+            this._cidPoller = null;
+          }
+          Core.setupStorageListener(null, null);
+          Logger.info("CounterModule destroyed");
+        },
+        onUserChange(user) {
+          this.loadDataForUser(user);
+        },
+        _boundKeyHandler: null,
+        _boundClickHandler: null,
+        _cidPoller: null,
+        bindEvents() {
+          if (this._boundKeyHandler && this._boundClickHandler) return;
+          if (this._cidPoller) {
+            clearInterval(this._cidPoller);
+            this._cidPoller = null;
+          }
+          if (this._boundKeyHandler) {
+            document.removeEventListener("keydown", this._boundKeyHandler, true);
+            this._boundKeyHandler = null;
+          }
+          if (this._boundClickHandler) {
+            document.removeEventListener("click", this._boundClickHandler, true);
+            this._boundClickHandler = null;
+          }
+          this._boundKeyHandler = (e) => {
+            if (!ModuleRegistry.isEnabled("counter")) return;
+            if (e.key !== "Enter" || e.shiftKey || e.isComposing || e.originalEvent?.isComposing) return;
+            const act = document.activeElement;
+            if (act && (act.tagName === "TEXTAREA" || act.getAttribute("contenteditable") === "true")) {
+              setTimeout(() => this.attemptIncrement(), 50);
+            }
+          };
+          this._boundClickHandler = (e) => {
+            if (!ModuleRegistry.isEnabled("counter")) return;
+            const btn = e.target?.closest ? e.target.closest("button") : null;
+            if (btn && !btn.disabled) {
+              if (btn.classList.contains("send-button")) {
+                this.attemptIncrement();
+                return;
+              }
+              const label = btn.getAttribute("aria-label") || "";
+              if (label.includes("Send") || label.includes("发送")) {
+                this.attemptIncrement();
+              }
+            }
+          };
+          document.addEventListener("keydown", this._boundKeyHandler, true);
+          document.addEventListener("click", this._boundClickHandler, true);
+        },
+        // --- Data management ---
+        loadDataForUser(targetUser) {
+          if (!targetUser) return;
+          Core.setupStorageListener(targetUser, (newVal) => {
+            this.state.total = newVal.total || 0;
+            this.state.totalChatsCreated = newVal.totalChatsCreated || 0;
+            this.state.chats = newVal.chats || {};
+            this.state.dailyCounts = newVal.dailyCounts || {};
+            PanelUI.update();
+          });
+          if (targetUser === TEMP_USER) {
+            Object.assign(this.state, { total: 0, totalChatsCreated: 0, chats: {}, dailyCounts: {}, viewMode: "today", isExpanded: false, resetStep: 0 });
+            return;
+          }
+          const storageKey = `gemini_store_${targetUser}`;
+          let savedData;
+          try {
+            savedData = GM_getValue(storageKey, null);
+          } catch (e) {
+            savedData = null;
+          }
+          if (savedData && typeof savedData === "object") {
+            this.state.total = typeof savedData.total === "number" ? savedData.total : 0;
+            this.state.totalChatsCreated = typeof savedData.totalChatsCreated === "number" ? savedData.totalChatsCreated : 0;
+            this.state.chats = typeof savedData.chats === "object" && savedData.chats ? savedData.chats : {};
+            this.state.dailyCounts = typeof savedData.dailyCounts === "object" && savedData.dailyCounts ? savedData.dailyCounts : {};
+            if (savedData.session && Object.keys(this.state.dailyCounts).length === 0) {
+              const today = Core.getDayKey(this.resetHour);
+              this.state.dailyCounts[today] = { messages: savedData.session, chats: 0 };
+            }
+          } else {
+            Object.assign(this.state, { total: 0, totalChatsCreated: 0, chats: {}, dailyCounts: {}, viewMode: "today", isExpanded: false, resetStep: 0 });
+          }
+          Logger.debug("Loaded user data", {
+            user: targetUser,
+            total: this.state.total,
+            totalChatsCreated: this.state.totalChatsCreated,
+            days: Object.keys(this.state.dailyCounts).length
+          });
+        },
+        saveData() {
+          const user = Core.getCurrentUser();
+          if (!user || !user.includes("@")) return;
+          const storageKey = `gemini_store_${user}`;
+          try {
+            GM_setValue(storageKey, {
+              total: this.state.total,
+              totalChatsCreated: this.state.totalChatsCreated,
+              chats: this.state.chats,
+              dailyCounts: this.state.dailyCounts
+            });
+          } catch (e) {
+          }
+        },
+        // --- Counting logic ---
+        ensureTodayEntry() {
+          const today = Core.getDayKey(this.resetHour);
+          return (0, import_counter_calc.ensureTodayEntry)(this.state.dailyCounts, today);
+        },
+        getTodayMessages() {
+          const today = Core.getDayKey(this.resetHour);
+          return this.state.dailyCounts[today]?.messages || 0;
+        },
+        getTodayByModel() {
+          const today = Core.getDayKey(this.resetHour);
+          return this.state.dailyCounts[today]?.byModel || { flash: 0, thinking: 0, pro: 0 };
+        },
+        getWeightedQuota() {
+          const bm = this.getTodayByModel();
+          return Object.keys(bm).reduce((sum, key) => {
+            const mult = this.MODEL_CONFIG[key]?.multiplier ?? 1;
+            return sum + bm[key] * mult;
+          }, 0);
+        },
+        attemptIncrement() {
+          const now = Date.now();
+          if (now - this.lastCountTime < this.COOLDOWN) return;
+          const today = this.ensureTodayEntry();
+          this.state.total++;
+          this.state.dailyCounts[today].messages++;
+          const model = this.currentModel || "flash";
+          if (this.state.dailyCounts[today].byModel) {
+            this.state.dailyCounts[today].byModel[model] = (this.state.dailyCounts[today].byModel[model] || 0) + 1;
+          }
+          this.lastCountTime = now;
+          const cid = Core.getChatId();
+          if (cid) {
+            if (!this.state.chats[cid]) {
+              this.state.totalChatsCreated++;
+              this.state.dailyCounts[today].chats++;
+            }
+            this.state.chats[cid] = (this.state.chats[cid] || 0) + 1;
+            this.saveData();
+            PanelUI.update();
+          } else {
+            this.saveData();
+            PanelUI.update();
+            let attempts = 0;
+            const capturedDay = today;
+            if (this._cidPoller) clearInterval(this._cidPoller);
+            this._cidPoller = setInterval(() => {
+              attempts++;
+              const newCid = Core.getChatId();
+              if (newCid) {
+                clearInterval(this._cidPoller);
+                this._cidPoller = null;
+                if (!this.state.chats[newCid]) {
+                  this.state.totalChatsCreated++;
+                  this.ensureTodayEntry();
+                  if (this.state.dailyCounts[capturedDay]) {
+                    this.state.dailyCounts[capturedDay].chats++;
+                  }
+                }
+                this.state.chats[newCid] = (this.state.chats[newCid] || 0) + 1;
+                this.saveData();
+                PanelUI.update();
+              } else if (attempts >= 20) {
+                clearInterval(this._cidPoller);
+                this._cidPoller = null;
+                this.saveData();
+              }
+            }, 500);
+          }
+        },
+        // --- Model detection ---
+        detectModel() {
+          try {
+            const modeBtn = document.querySelector("button.input-area-switch");
+            if (modeBtn) {
+              const text = modeBtn.textContent.trim();
+              const key = this.MODEL_DETECT_MAP[text];
+              if (key) return key;
+            }
+            const pillLabel = document.querySelector('[data-test-id="bard-mode-menu-button"]');
+            if (pillLabel) {
+              const full = pillLabel.textContent.trim();
+              const key = this.MODEL_DETECT_MAP[full] || this.MODEL_DETECT_MAP[full.split(/\s/)[0]];
+              if (key) return key;
+            }
+            const selected = document.querySelector(".bard-mode-list-button.is-selected");
+            if (selected) {
+              const full = selected.textContent.trim();
+              const key = this.MODEL_DETECT_MAP[full] || this.MODEL_DETECT_MAP[full.split(/\s/)[0]];
+              if (key) return key;
+            }
+          } catch (e) {
+          }
+          return this.currentModel;
+        },
+        detectAccountType() {
+          try {
+            const pillboxBtn = document.querySelector("button.gds-pillbox-button, button.pillbox-btn");
+            if (pillboxBtn) {
+              const text = pillboxBtn.textContent.trim().toUpperCase();
+              if (text === "ULTRA" || text.includes("ULTRA")) return "ultra";
+              if (text === "PRO" || text.includes("PRO")) return "pro";
+            }
+            return "free";
+          } catch (e) {
+          }
+          return this.accountType;
+        },
+        // --- Statistics (delegating to lib pure functions) ---
+        calculateStreaks() {
+          return (0, import_counter_calc.calculateStreaks)(this.state.dailyCounts, this.resetHour);
+        },
+        getLast7DaysData() {
+          return (0, import_counter_calc.getLast7DaysData)(this.state.dailyCounts, this.resetHour);
+        },
+        // --- Reset logic ---
+        handleReset() {
+          const user = Core.getCurrentUser();
+          if (Core.getInspectingUser() !== user) return;
+          if (this.state.resetStep === 0) {
+            this.state.resetStep = 1;
+            PanelUI.update();
+            return;
+          }
+          if (this.state.viewMode === "today") {
+            const today = Core.getDayKey(this.resetHour);
+            if (this.state.dailyCounts[today]) {
+              this.state.dailyCounts[today].messages = 0;
+              this.state.dailyCounts[today].byModel = { flash: 0, thinking: 0, pro: 0 };
+            }
+          } else if (this.state.viewMode === "chat") {
+            const cid = Core.getChatId();
+            if (cid) this.state.chats[cid] = 0;
+          } else if (this.state.viewMode === "total") {
+            if (this.state.resetStep === 1) {
+              this.state.resetStep = 2;
+              PanelUI.update();
+              return;
+            }
+            this.state.total = 0;
+            this.state.chats = {};
+            this.state.dailyCounts = {};
+            this.state.totalChatsCreated = 0;
+          }
+          this.state.resetStep = 0;
+          this.saveData();
+          PanelUI.update();
+        }
+      };
+    }
+  });
+
+  // lib/model_config.js
+  var require_model_config = __commonJS({
+    "lib/model_config.js"(exports, module) {
+      "use strict";
+      var MODEL_CONFIG = {
+        flash: { label: "3 Flash", multiplier: 0, color: "#34a853" },
+        thinking: { label: "3 Flash Thinking", multiplier: 0.33, color: "#fbbc04" },
+        pro: { label: "3 Pro", multiplier: 1, color: "#ea4335" }
+      };
+      var MODEL_DETECT_MAP = {
+        // EN
+        "Fast": "flash",
+        "Flash": "flash",
+        "flash": "flash",
+        "Thinking": "thinking",
+        "thinking": "thinking",
+        "Pro": "pro",
+        "pro": "pro",
+        // ZH
+        "快速": "flash",
+        "思考": "thinking",
+        "专业": "pro",
+        // JA
+        "高速": "flash",
+        "プロ": "pro",
+        // KO
+        "빠른": "flash",
+        "사고": "thinking",
+        "프로": "pro"
+      };
+      module.exports = { MODEL_CONFIG, MODEL_DETECT_MAP };
+    }
+  });
+
+  // lib/quota_calc.js
+  var require_quota_calc = __commonJS({
+    "lib/quota_calc.js"(exports, module) {
+      var { MODEL_CONFIG } = require_model_config();
+      function getWeightedQuota2(byModel, config = MODEL_CONFIG) {
+        if (!byModel || typeof byModel !== "object") return 0;
+        return Object.keys(byModel).reduce((sum, key) => {
+          const mult = config[key]?.multiplier ?? 1;
+          return sum + (byModel[key] || 0) * mult;
+        }, 0);
+      }
+      function ensureByModel(entry) {
+        if (!entry) return { messages: 0, chats: 0, byModel: { flash: 0, thinking: 0, pro: 0 } };
+        if (!entry.byModel) {
+          entry.byModel = { flash: 0, thinking: 0, pro: 0 };
+        }
+        return entry;
+      }
+      function formatQuotaLabel(rawCount, weighted, limit) {
+        const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
+        return `${rawCount} msgs (${weightedStr} weighted) / ${limit}`;
+      }
+      function getQuotaBarState(weighted, limit) {
+        const pct = limit > 0 ? Math.min(weighted / limit * 100, 100) : 0;
+        let color;
+        if (pct < 60) color = "#34a853";
+        else if (pct < 85) color = "#fbbc04";
+        else color = "#ea4335";
+        return { pct, color };
+      }
+      module.exports = { getWeightedQuota: getWeightedQuota2, ensureByModel, formatQuotaLabel, getQuotaBarState };
+    }
+  });
+
+  // lib/export_formatter.js
+  var require_export_formatter = __commonJS({
+    "lib/export_formatter.js"(exports, module) {
+      var { getWeightedQuota: getWeightedQuota2 } = require_quota_calc();
+      var { formatLocalDate } = require_date_utils();
+      function exportCSV2(dailyCounts, opts = {}) {
+        const header = "Date,Messages,Chats,Flash,Thinking,Pro,Weighted";
+        const rows = [];
+        const sorted = Object.entries(dailyCounts || {}).sort(([a], [b]) => a.localeCompare(b));
+        let sumMessages = 0, sumChats = 0, sumFlash = 0, sumThinking = 0, sumPro = 0, sumWeighted = 0;
+        for (const [date, entry] of sorted) {
+          const messages = entry.messages || 0;
+          const chats = entry.chats || 0;
+          const bm = entry.byModel || { flash: 0, thinking: 0, pro: 0 };
+          const flash = bm.flash || 0;
+          const thinking = bm.thinking || 0;
+          const pro = bm.pro || 0;
+          const weighted = getWeightedQuota2(bm);
+          const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(2);
+          rows.push(`${date},${messages},${chats},${flash},${thinking},${pro},${weightedStr}`);
+          sumMessages += messages;
+          sumChats += chats;
+          sumFlash += flash;
+          sumThinking += thinking;
+          sumPro += pro;
+          sumWeighted += weighted;
+        }
+        const swStr = sumWeighted % 1 === 0 ? String(sumWeighted) : sumWeighted.toFixed(2);
+        rows.push(`TOTAL,${sumMessages},${sumChats},${sumFlash},${sumThinking},${sumPro},${swStr}`);
+        return header + "\n" + rows.join("\n") + "\n";
+      }
+      function exportMarkdown2(dailyCounts, opts = {}) {
+        const now = formatLocalDate(/* @__PURE__ */ new Date());
+        const user = opts.user || "Unknown";
+        const lines = [];
+        lines.push("# Gemini Usage Report");
+        lines.push("");
+        lines.push(`**User:** ${user} | **Exported:** ${now}`);
+        lines.push("");
+        lines.push("## Summary");
+        lines.push("");
+        lines.push("| Metric | Value |");
+        lines.push("|--------|-------|");
+        lines.push(`| Total Messages | ${opts.total || 0} |`);
+        lines.push(`| Chats Created | ${opts.totalChatsCreated || 0} |`);
+        if (opts.currentStreak !== void 0) {
+          lines.push(`| Current Streak | ${opts.currentStreak} days |`);
+        }
+        if (opts.bestStreak !== void 0) {
+          lines.push(`| Best Streak | ${opts.bestStreak} days |`);
+        }
+        lines.push("");
+        const sorted = Object.entries(dailyCounts || {}).sort(([a], [b]) => a.localeCompare(b));
+        const last30 = sorted.slice(-30);
+        if (last30.length > 0) {
+          lines.push("## Daily Breakdown (Last 30 Days)");
+          lines.push("");
+          lines.push("| Date | Messages | Flash | Thinking | Pro | Weighted |");
+          lines.push("|------|----------|-------|----------|-----|----------|");
+          for (const [date, entry] of last30) {
+            const messages = entry.messages || 0;
+            const bm = entry.byModel || { flash: 0, thinking: 0, pro: 0 };
+            const flash = bm.flash || 0;
+            const thinking = bm.thinking || 0;
+            const pro = bm.pro || 0;
+            const weighted = getWeightedQuota2(bm);
+            const wStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
+            lines.push(`| ${date} | ${messages} | ${flash} | ${thinking} | ${pro} | ${wStr} |`);
+          }
+          lines.push("");
+        }
+        lines.push("---");
+        lines.push("");
+        lines.push("*Generated by Gemini Primer++*");
+        lines.push("");
+        return lines.join("\n");
+      }
+      module.exports = { exportCSV: exportCSV2, exportMarkdown: exportMarkdown2 };
+    }
+  });
+
+  // src/modules/export.js
+  var import_quota_calc, import_export_formatter, ExportModule;
+  var init_export = __esm({
+    "src/modules/export.js"() {
+      init_logger();
+      init_core();
+      init_native_ui();
+      init_counter();
+      import_quota_calc = __toESM(require_quota_calc());
+      import_export_formatter = __toESM(require_export_formatter());
+      init_icons();
+      ExportModule = {
+        id: "export",
+        name: NativeUI.t("数据导出", "Data Export"),
+        description: NativeUI.t("JSON / CSV / Markdown 多格式导出", "Export in JSON / CSV / Markdown"),
+        iconId: "download",
+        defaultEnabled: true,
+        init() {
+          Logger.info("ExportModule initialized");
+        },
+        destroy() {
+          this.removeNativeUI();
+          Logger.info("ExportModule destroyed");
+        },
+        onUserChange() {
+        },
+        // --- Native UI: Export button next to chat title ---
+        injectNativeUI() {
+          const NATIVE_ID = "gc-export-native";
+          if (document.getElementById(NATIVE_ID)) return;
+          const titleEl = NativeUI.getChatHeader();
+          if (!titleEl) return;
+          const parent = titleEl.parentElement;
+          if (!parent) return;
+          const btn = document.createElement("button");
+          btn.id = NATIVE_ID;
+          btn.className = "gc-native-btn";
+          btn.style.cssText = "background:transparent;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:50%;line-height:1;display:flex;align-items:center;opacity:0.6;";
+          btn.appendChild(createIcon("download", 16));
+          btn.title = "Export conversation";
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            this._toggleExportMenu(btn);
+          };
+          const pos = getComputedStyle(parent).position;
+          if (pos === "static" || pos === "") parent.style.position = "relative";
+          parent.appendChild(btn);
+        },
+        removeNativeUI() {
+          NativeUI.remove("gc-export-native");
+          NativeUI.remove("gc-export-menu");
+          if (this._menuAbort) {
+            this._menuAbort.abort();
+            this._menuAbort = null;
+          }
+        },
+        _toggleExportMenu(anchorBtn) {
+          const MENU_ID = "gc-export-menu";
+          const existing = document.getElementById(MENU_ID);
+          if (existing) {
+            existing.remove();
+            return;
+          }
+          const menu = document.createElement("div");
+          menu.id = MENU_ID;
+          menu.className = "gc-dropdown-menu";
+          menu.style.cssText = "top:100%;right:0;margin-top:4px;";
+          const items = [
+            { icon: "file-text", text: "JSON", action: () => this.exportJSON() },
+            { icon: "chart", text: "CSV", action: () => this.doExportCSV() },
+            { icon: "edit", text: "Markdown", action: () => this.doExportMarkdown() }
+          ];
+          items.forEach((item) => {
+            const el = document.createElement("div");
+            el.className = "gc-dropdown-item";
+            el.appendChild(createIcon(item.icon, 14));
+            el.appendChild(document.createTextNode(" " + item.text));
+            el.onclick = (e) => {
+              e.stopPropagation();
+              menu.remove();
+              item.action();
+            };
+            menu.appendChild(el);
+          });
+          anchorBtn.parentElement.appendChild(menu);
+          if (this._menuAbort) this._menuAbort.abort();
+          this._menuAbort = new AbortController();
+          const signal = this._menuAbort.signal;
+          const closeMenu = (e) => {
+            if (!menu.contains(e.target) && e.target !== anchorBtn) {
+              menu.remove();
+              if (this._menuAbort) {
+                this._menuAbort.abort();
+                this._menuAbort = null;
+              }
+            }
+          };
+          document.addEventListener("click", closeMenu, { capture: true, signal });
+        },
+        // --- Export helpers ---
+        _download(content, filename, type) {
+          const blob = new Blob([content], { type });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        _getFilePrefix() {
+          const user = Core.getCurrentUser()?.split("@")[0] || "unknown";
+          const now = /* @__PURE__ */ new Date();
+          const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          return `gemini-counter-${user}-${date}`;
+        },
+        exportJSON() {
+          const cm = CounterModule;
+          if (!cm?.state) return;
+          const data = {
+            total: cm.state.total,
+            totalChatsCreated: cm.state.totalChatsCreated,
+            chats: cm.state.chats,
+            dailyCounts: cm.state.dailyCounts,
+            exportedAt: (/* @__PURE__ */ new Date()).toISOString()
+          };
+          this._download(JSON.stringify(data, null, 2), `${this._getFilePrefix()}.json`, "application/json");
+        },
+        doExportCSV() {
+          const cm = CounterModule;
+          if (!cm?.state) return;
+          const content = (0, import_export_formatter.exportCSV)(cm.state.dailyCounts);
+          this._download(content, `${this._getFilePrefix()}.csv`, "text/csv");
+        },
+        doExportMarkdown() {
+          const cm = CounterModule;
+          if (!cm?.state) return;
+          const streaks = cm.calculateStreaks ? cm.calculateStreaks() : {};
+          const content = (0, import_export_formatter.exportMarkdown)(cm.state.dailyCounts, {
+            user: Core.getCurrentUser(),
+            total: cm.state.total,
+            totalChatsCreated: cm.state.totalChatsCreated,
+            currentStreak: streaks.current,
+            bestStreak: streaks.best
+          });
+          this._download(content, `${this._getFilePrefix()}.md`, "text/markdown");
+        },
+        getOnboarding() {
+          return {
+            zh: {
+              rant: "2026 年了，Google 最引以为傲的 AI 产品居然不支持导出对话。你跟 Gemini 讨论了三天的架构方案，结果想保存一份？不好意思，请手动复制粘贴 300 条消息。产品经理是不是觉得用户的对话像阅后即焚的 Snapchat？",
+              features: "在聊天标题旁添加 📤 导出按钮，一键导出当前对话为 JSON/CSV/Markdown 文件。",
+              guide: "1. 打开任意对话 → 2. 点击标题右侧的 📤 按钮 → 3. 选择导出格式 → 4. 文件自动下载"
+            },
+            en: {
+              rant: "It's 2026. Google's flagship AI product doesn't let you export conversations. You spent three days discussing architecture with Gemini and want to save it? Sorry, please manually copy-paste 300 messages. Does the PM think conversations are Snapchats?",
+              features: "Adds a 📤 export button next to the chat title. One-click export to JSON/CSV/Markdown.",
+              guide: "1. Open any conversation → 2. Click 📤 next to the title → 3. Pick a format → 4. File downloads automatically"
+            }
+          };
+        },
+        renderExportButtons(container) {
+          const jsonBtn = document.createElement("button");
+          jsonBtn.className = "settings-btn";
+          jsonBtn.style.cssText = "display:flex;align-items:center;gap:6px;";
+          jsonBtn.appendChild(createIcon("download", 14));
+          jsonBtn.appendChild(document.createTextNode(" Export JSON"));
+          jsonBtn.onclick = () => this.exportJSON();
+          container.appendChild(jsonBtn);
+          const csvBtn = document.createElement("button");
+          csvBtn.className = "settings-btn";
+          csvBtn.style.cssText = "display:flex;align-items:center;gap:6px;";
+          csvBtn.appendChild(createIcon("download", 14));
+          csvBtn.appendChild(document.createTextNode(" Export CSV"));
+          csvBtn.onclick = () => this.doExportCSV();
+          container.appendChild(csvBtn);
+          const mdBtn = document.createElement("button");
+          mdBtn.className = "settings-btn";
+          mdBtn.style.cssText = "display:flex;align-items:center;gap:6px;";
+          mdBtn.appendChild(createIcon("download", 14));
+          mdBtn.appendChild(document.createTextNode(" Export Markdown"));
+          mdBtn.onclick = () => this.doExportMarkdown();
+          container.appendChild(mdBtn);
+        }
+      };
+    }
+  });
+
+  // src/debug_utils.js
+  function maskEmail(email) {
+    if (!email || !email.includes("@")) return email;
+    const [local, domain] = email.split("@");
+    return local[0] + "***@" + domain[0] + "***." + domain.split(".").pop();
+  }
+  function maskStorageKey(key) {
+    if (!key || !key.includes("@")) return key;
+    return key.replace(/([a-zA-Z0-9._-]+)@([a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/, (m, local, domain) => {
+      return local[0] + "***@" + domain[0] + "***." + domain.split(".").pop();
+    });
+  }
+  function debugDumpStorageKeys() {
+    try {
+      const keys = (typeof GM_listValues === "function" ? GM_listValues() : []).slice().sort();
+      const geminiKeys = keys.filter((k) => k.startsWith("gemini_") || k.startsWith("gemini_store_"));
+      console.group("💎 Gemini Debug: Storage Keys");
+      console.log("All keys:", keys.map(maskStorageKey));
+      console.log("Gemini keys:", geminiKeys.map(maskStorageKey));
+      console.groupEnd();
+      Logger.info("Debug: dumped storage keys", { count: keys.length });
+    } catch (e) {
+      Logger.warn("Debug: failed to list storage keys", { error: String(e) });
+    }
+  }
+  function debugShowDetectedUser() {
+    try {
+      const detected = Core.detectUser();
+      const current = Core.getCurrentUser();
+      const effective = detected || current;
+      const storageKey = effective && effective.includes("@") ? `gemini_store_${maskEmail(effective)}` : null;
+      console.group("💎 Gemini Debug: User");
+      console.log("detected:", maskEmail(detected));
+      console.log("currentUser:", maskEmail(current));
+      console.log("effectiveUser:", maskEmail(effective));
+      console.log("storageKey:", storageKey);
+      console.groupEnd();
+      Logger.info("Debug: show detected user", { detected: maskEmail(detected), current: maskEmail(current), effective: maskEmail(effective) });
+    } catch (e) {
+      Logger.warn("Debug: failed to show detected user", { error: String(e) });
+    }
+  }
+  function debugExportAllStorage() {
+    try {
+      const keys = (typeof GM_listValues === "function" ? GM_listValues() : []).slice().sort();
+      const data = {};
+      keys.forEach((k) => {
+        try {
+          data[k] = GM_getValue(k);
+        } catch (e) {
+          data[k] = { error: String(e) };
+        }
+      });
+      const payload = {
+        exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        keys,
+        data
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "gemini_storage_export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      console.log("💎 Storage export saved: gemini_storage_export.json");
+      Logger.info("Debug: export all storage");
+    } catch (e) {
+      Logger.warn("Debug: failed to export storage", { error: String(e) });
+    }
+  }
+  function debugExportLegacyData() {
+    try {
+      const legacyKeys = [
+        "gemini_count_chats_map",
+        "gemini_count_session",
+        "gemini_count_total",
+        "gemini_interaction_count",
+        "gemini_view_mode",
+        "gemini_panel_position",
+        "gemini_panel_pos_v64",
+        "gemini_panel_pos"
+      ];
+      const data = {};
+      legacyKeys.forEach((k) => {
+        try {
+          data[k] = GM_getValue(k);
+        } catch (e) {
+          data[k] = { error: String(e) };
+        }
+      });
+      const payload = {
+        exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        legacyKeys,
+        data
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "gemini_legacy_export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      console.log("💎 Legacy export saved: gemini_legacy_export.json");
+      Logger.info("Debug: export legacy data");
+    } catch (e) {
+      Logger.warn("Debug: failed to export legacy data", { error: String(e) });
+    }
+  }
+  function debugExportLogs() {
+    try {
+      const payload = Logger.export();
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "gemini_logs_export.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      Logger.info("Debug: export logs");
+    } catch (e) {
+      Logger.warn("Debug: failed to export logs", { error: String(e) });
+    }
+  }
+  function debugDumpGeminiStores() {
+    try {
+      const keys = (typeof GM_listValues === "function" ? GM_listValues() : []).slice().sort();
+      const targets = keys.filter((k) => k.startsWith("gemini_store_") || k.startsWith("gemini_folders_data") || k.startsWith("gemini_"));
+      console.group("💎 Gemini Debug: Storage Dump");
+      targets.forEach((k) => {
+        try {
+          console.log(maskStorageKey(k), GM_getValue(k));
+        } catch (err) {
+          console.warn("Failed to read", maskStorageKey(k), err);
+        }
+      });
+      console.groupEnd();
+    } catch (e) {
+      Logger.warn("Debug: failed to dump storage", { error: String(e) });
+    }
+  }
+  var init_debug_utils = __esm({
+    "src/debug_utils.js"() {
+      init_logger();
+      init_core();
+    }
+  });
+
+  // src/panel_ui.js
+  function setIconText(el, iconName, text, iconSize = 14) {
+    el.textContent = "";
+    el.appendChild(createIcon(iconName, iconSize));
+    if (text) el.appendChild(document.createTextNode(" " + text));
+  }
+  function renderModIcon(mod, size = 16) {
+    const name = MODULE_ICON_MAP[mod.id];
+    if (name) return createIcon(name, size);
+    const span = document.createElement("span");
+    span.textContent = mod.icon;
+    return span;
+  }
+  var MODULE_ICON_MAP, PanelUI;
+  var init_panel_ui = __esm({
+    "src/panel_ui.js"() {
+      init_constants();
+      init_icons();
+      init_guided_tour();
+      init_logger();
+      init_core();
+      init_module_registry();
+      init_state();
+      init_counter();
+      init_export();
+      init_debug_utils();
+      MODULE_ICON_MAP = {
+        "counter": "chart",
+        "export": "upload",
+        "folders": "folder",
+        "prompt-vault": "gem",
+        "default-model": "bot",
+        "batch-delete": "trash",
+        "quote-reply": "quote",
+        "ui-tweaks": "palette"
+      };
+      PanelUI = {
+        _activeTab: "stats",
+        // --- 样式注入 ---
+        injectStyles() {
+          GM_addStyle(`
+            #${PANEL_ID} {
+                --bg: #202124; --text-main: #fff; --text-sub: #ccc; --accent: #8ab4f8;
+                --blur: 18px; --saturate: 180%;
+                position: fixed; z-index: 2147483647; width: 170px;
+                background: var(--bg);
+                backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+                -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--saturate));
+                border: 1px solid var(--border); border-radius: 16px;
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                box-shadow: var(--shadow), var(--border-highlight, inset 0 0 0 transparent);
+                font-family: 'Google Sans', Roboto, sans-serif;
+                overflow: hidden; user-select: none;
+                display: flex; flex-direction: column;
+                transition: height 0.35s cubic-bezier(0.19, 1, 0.22, 1),
+                            background 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                            box-shadow 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+                            transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            }
+            #${PANEL_ID}:hover {
+                box-shadow: var(--shadow-hover, var(--shadow)), var(--border-highlight, inset 0 0 0 transparent);
+                transform: translateY(-2px);
+            }
+            .gemini-header {
+                padding: 8px 14px; cursor: grab;
+                background: var(--header-bg, rgba(255, 255, 255, 0.03));
+                border-bottom: 1px solid var(--header-border, rgba(255, 255, 255, 0.05));
+                display: flex; align-items: center; justify-content: space-between; height: 32px;
+            }
+            .user-capsule {
+                display: flex; align-items: center; gap: 4px;
+                font-size: 10px; color: var(--text-sub);
+                background: var(--badge-bg, rgba(255,255,255,0.05));
+                padding: 2px 8px; border-radius: 12px; border: 1px solid transparent;
+                max-width: 120px; overflow: hidden;
+            }
+            .acct-badge-inline {
+                font-size: 8px; font-weight: 600; letter-spacing: 0.4px;
+                padding: 1px 5px; border-radius: 10px;
+                background: var(--badge-bg, rgba(255,255,255,0.06));
+                color: var(--text-sub);
+                text-transform: uppercase;
+                flex-shrink: 0;
+            }
+            .acct-badge-inline[data-tier="pro"] {
+                background: rgba(138,180,248,0.2);
+                color: #8ab4f8;
+            }
+            .acct-badge-inline[data-tier="ultra"] {
+                background: rgba(251,188,4,0.2);
+                color: #fbbc04;
+            }
+            .user-capsule.viewing-other { border-color: #fdbd00; color: #fdbd00; }
+            .user-avatar-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+            .gemini-toggle-btn { cursor: pointer; font-size: 14px; opacity: 0.6; color: var(--text-sub);
+                transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+            .gemini-toggle-btn:hover { opacity: 1; color: var(--accent); }
+            .gemini-main-view { padding: 12px 14px 14px; text-align: center; }
+            .gemini-big-num {
+                font-size: 40px; font-weight: 400; color: var(--text-main); line-height: 1;
+                margin-bottom: 4px; text-shadow: 0 0 20px rgba(128, 128, 128, 0.1);
+                transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .gemini-big-num.bump {
+                animation: numBump 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            @keyframes numBump {
+                0%   { transform: scale(1); }
+                40%  { transform: scale(1.15); }
+                100% { transform: scale(1); }
+            }
+
+            /* --- 模型 & 配额 --- */
+            .gemini-model-row {
+                display: flex; align-items: center; justify-content: center; gap: 6px;
+                margin-bottom: 6px;
+            }
+            .model-badge {
+                font-size: 9px; font-weight: 700; letter-spacing: 0.6px;
+                padding: 2px 7px; border-radius: 6px;
+                line-height: 1.4;
+                border: 1px solid var(--divider, rgba(255,255,255,0.15));
+            }
+            .quota-bar-wrap {
+                margin: 6px 0 8px; height: 4px; border-radius: 2px;
+                background: var(--btn-bg); overflow: hidden;
+                position: relative;
+            }
+            .quota-bar-fill {
+                height: 100%; border-radius: 2px;
+                transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                            background 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .quota-label {
+                font-size: 9px; color: var(--text-sub); opacity: 0.6;
+                margin-bottom: 8px; font-family: monospace;
+            }
+
+            .gemini-sub-info {
+                font-size: 10px; color: var(--text-sub); margin-bottom: 8px;
+                font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            }
+            .gemini-details-view {
+                height: 0; opacity: 0; overflow: hidden; background: var(--detail-bg, rgba(0,0,0,0.1));
+                padding: 0 12px;
+                transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .gemini-details-view.expanded { height: auto; opacity: 1; padding: 10px 12px 14px 12px; border-top: 1px solid var(--border); max-height: 420px; overflow-y: auto; }
+            .section-title {
+                font-size: 9px; color: var(--text-sub); opacity: 0.5;
+                margin: 8px 0 4px 0; text-transform: uppercase; letter-spacing: 1px;
+            }
+            .detail-row {
+                display: flex; justify-content: space-between; align-items: center;
+                margin-bottom: 4px; font-size: 11px; color: var(--text-sub); cursor: pointer;
+                padding: 5px 8px; border-radius: 6px;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .detail-row:hover { background: var(--row-hover); color: var(--text-main); }
+            .detail-row:active { transform: scale(0.98); }
+            .detail-row.active-mode { background: rgba(138, 180, 248, 0.15); color: var(--accent); font-weight: 500; }
+            .user-row { justify-content: flex-start; gap: 6px; }
+            .user-row.is-me { border-left: 2px solid var(--accent); }
+            .user-indicator { font-size: 8px; padding: 1px 4px; border-radius: 4px; background: var(--accent); color: #000; }
+            .g-btn {
+                background: var(--btn-bg); border: 1px solid transparent;
+                color: var(--text-sub); border-radius: 8px; padding: 6px 0; font-size: 11px;
+                cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); width: 100%;
+            }
+            .g-btn:hover { background: var(--row-hover); color: var(--text-main); }
+            .g-btn:active { transform: scale(0.97); opacity: 0.85; }
+            .g-btn.danger-1 { color: #f28b82; border-color: #f28b82; }
+            .g-btn.danger-2 { background: #f28b82; color: #202124; font-weight: bold; }
+            .g-btn.disabled { opacity: 0.5; cursor: not-allowed; }
+
+            /* Settings Modal */
+            @keyframes modalIn {
+                0% { opacity: 0; transform: translateY(16px) scale(0.96); }
+                100% { opacity: 1; transform: translateY(0) scale(1); }
+            }
+            @keyframes overlayIn {
+                from { opacity: 0; }
+                to   { opacity: 1; }
+            }
+            .settings-overlay {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: var(--overlay-tint, rgba(0,0,0,0.6)); z-index: 2147483646;
+                display: flex; align-items: center; justify-content: center;
+                animation: overlayIn 0.2s ease-out;
+            }
+            .settings-modal {
+                width: 300px; max-height: 80vh; overflow-y: auto;
+                background: var(--bg, #202124); border: 1px solid var(--border, rgba(255,255,255,0.1));
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
+                font-family: 'Google Sans', Roboto, sans-serif;
+                animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .settings-header {
+                padding: 12px 16px; border-bottom: 1px solid var(--divider, rgba(255,255,255,0.1));
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .settings-header h3 { margin: 0; font-size: 14px; color: var(--text-main, #fff); font-weight: 500; }
+            .settings-close { cursor: pointer; font-size: 18px; color: var(--text-sub, #9aa0a6); }
+            .settings-close:hover { color: var(--accent, #8ab4f8); }
+            .settings-body { padding: 12px 16px; }
+            .settings-section { margin-bottom: 16px; }
+            .settings-section-title { font-size: 10px; color: var(--text-sub, #9aa0a6); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+            .settings-row {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 8px 0; border-bottom: 1px solid var(--divider, rgba(255,255,255,0.05));
+            }
+            .settings-row:last-child { border-bottom: none; }
+            .settings-label { font-size: 12px; color: var(--text-main, #fff); }
+            .settings-select {
+                background: var(--btn-bg, rgba(255,255,255,0.05)); border: 1px solid var(--border, rgba(255,255,255,0.1));
+                color: var(--text-main, #fff); border-radius: 6px; padding: 4px 8px; font-size: 11px;
+            }
+            .settings-btn {
+                background: var(--btn-bg, rgba(255,255,255,0.05)); border: 1px solid transparent;
+                color: var(--text-sub, #9aa0a6); border-radius: 8px; padding: 8px 12px; font-size: 11px;
+                cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 4px;
+            }
+            .settings-btn:hover { background: var(--row-hover, rgba(255,255,255,0.05)); color: var(--text-main, #fff); }
+            .settings-btn:active { transform: scale(0.97); opacity: 0.85; }
+            .settings-btn.danger { color: #f28b82; border-color: #f28b82; }
+            .settings-version { font-size: 10px; color: var(--text-sub, #9aa0a6); text-align: center; padding: 8px; opacity: 0.6; }
+
+            /* Debug Modal */
+            .debug-overlay {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: var(--overlay-tint, rgba(0,0,0,0.6)); z-index: 2147483646;
+                display: flex; align-items: center; justify-content: center;
+                animation: overlayIn 0.2s ease-out;
+            }
+            .debug-modal {
+                width: 520px; max-width: 95vw; max-height: 85vh; overflow-y: auto;
+                background: var(--bg, #202124); border: 1px solid var(--border, rgba(255,255,255,0.1));
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.2);
+                font-family: 'Google Sans', Roboto, sans-serif;
+                animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .debug-header {
+                padding: 12px 16px; border-bottom: 1px solid var(--divider, rgba(255,255,255,0.1));
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .debug-header h3 { margin: 0; font-size: 14px; color: var(--text-main, #fff); font-weight: 500; }
+            .debug-close { cursor: pointer; font-size: 18px; color: var(--text-sub, #9aa0a6); }
+            .debug-close:hover { color: var(--accent, #8ab4f8); }
+            .debug-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+            .debug-kv { font-size: 11px; color: var(--text-sub); line-height: 1.6; }
+            .debug-kv strong { color: var(--text-main); font-weight: 500; }
+            .debug-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .debug-log-list {
+                background: var(--code-bg, rgba(0,0,0,0.3)); border: 1px solid var(--divider, rgba(255,255,255,0.08));
+                border-radius: 8px; padding: 8px; max-height: 240px; overflow: auto;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+                font-size: 10px; color: var(--text-sub);
+            }
+            .debug-log-item { padding: 2px 0; border-bottom: 1px dashed var(--divider, rgba(255,255,255,0.05)); }
+            .debug-log-item:last-child { border-bottom: none; }
+            .debug-filter-row { display: flex; gap: 6px; flex-wrap: wrap; }
+            .debug-filter-btn {
+                font-size: 10px; padding: 4px 8px; border-radius: 6px;
+                border: 1px solid var(--divider, rgba(255,255,255,0.1));
+                background: var(--input-bg, rgba(255,255,255,0.05));
+                color: var(--text-sub); cursor: pointer;
+            }
+            .debug-filter-btn.active { color: var(--text-main); border-color: var(--accent); }
+            .debug-search {
+                background: var(--code-bg, rgba(0,0,0,0.3));
+                border: 1px solid var(--divider, rgba(255,255,255,0.1));
+                color: var(--text-main); border-radius: 6px; padding: 4px 8px;
+                font-size: 10px; width: 100%;
+            }
+            .debug-level { font-weight: 700; letter-spacing: 0.3px; }
+            .debug-level.error { color: #f28b82; }
+            .debug-level.warn { color: #fbbc04; }
+            .debug-level.info { color: #8ab4f8; }
+            .debug-level.debug { color: #81c995; }
+
+            /* Module Toggle */
+            .module-toggle-row {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 10px 0; border-bottom: 1px solid var(--divider, rgba(255,255,255,0.05));
+            }
+            .module-info { display: flex; align-items: center; gap: 8px; }
+            .module-icon { font-size: 16px; display: inline-flex; align-items: center; }
+            .module-text { display: flex; flex-direction: column; }
+            .module-name { font-size: 12px; color: var(--text-main, #fff); }
+            .module-desc { font-size: 9px; color: var(--text-sub, #9aa0a6); opacity: 0.7; }
+            .toggle-switch {
+                position: relative; width: 36px; height: 20px;
+                background: var(--btn-bg, rgba(255,255,255,0.1)); border-radius: 10px;
+                cursor: pointer; transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .toggle-switch.on { background: var(--accent, #8ab4f8); }
+            .toggle-switch::after {
+                content: ''; position: absolute; top: 2px; left: 2px;
+                width: 16px; height: 16px; background: #fff; border-radius: 50%;
+                transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            }
+            .toggle-switch.on::after { transform: translateX(16px); }
+
+            /* --- Dashboard Styles --- */
+            .dash-overlay {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: var(--overlay-tint, rgba(0,0,0,0.85)); z-index: 2147483645;
+                display: flex; align-items: center; justify-content: center;
+                backdrop-filter: blur(5px);
+                animation: overlayIn 0.2s ease-out;
+            }
+            .dash-modal {
+                width: 800px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+                background: var(--bg); border: 1px solid var(--border);
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                border-radius: 24px; box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
+                display: flex; flex-direction: column;
+                animation: modalIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .dash-header {
+                padding: 24px 32px; border-bottom: 1px solid var(--border);
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .dash-title { font-size: 24px; font-weight: 300; color: var(--text-main); display: flex; align-items: center; gap: 12px; }
+            .dash-close { font-size: 28px; color: var(--text-sub); cursor: pointer; transition: 0.2s; }
+            .dash-close:hover { color: var(--accent); transform: scale(1.1); }
+
+            .dash-content { padding: 32px; display: flex; flex-direction: column; gap: 32px; }
+
+            /* Metric Cards */
+            .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+            .metric-card {
+                background: var(--input-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border);
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                border-radius: 16px; padding: 20px; text-align: center;
+                transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+            }
+            .metric-card:hover { transform: translateY(-3px); background: var(--row-hover, rgba(255,255,255,0.06)); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+            .metric-val { font-size: 32px; color: var(--text-main); font-weight: 300; margin-bottom: 4px; }
+            .metric-label { font-size: 12px; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; }
+
+            /* Heatmap */
+            .heatmap-container {
+                background: var(--input-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border);
+                border-radius: 16px; padding: 24px; overflow-x: auto;
+            }
+            .heatmap-title { font-size: 14px; color: var(--text-main); margin-bottom: 16px; display: flex; justify-content: space-between; }
+            .heatmap-grid { display: flex; gap: 4px; }
+            .heatmap-col { display: flex; flex-direction: column; gap: 4px; }
+            .heatmap-cell {
+                width: 12px; height: 12px; border-radius: 3px;
+                background: var(--btn-bg, rgba(255,255,255,0.1)); position: relative;
+                transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .heatmap-cell:hover { transform: scale(1.4); z-index: 10; outline: 1.5px solid var(--accent); outline-offset: 0.5px; }
+            .heatmap-legend { display: flex; gap: 4px; align-items: center; font-size: 10px; color: var(--text-sub); }
+            .legend-item { width: 10px; height: 10px; border-radius: 2px; }
+
+            .heatmap-wrapper { display: flex; gap: 8px; }
+            .heatmap-week-labels { display: flex; flex-direction: column; gap: 4px; padding-top: 18px; }
+            .week-label { height: 12px; font-size: 9px; line-height: 12px; color: var(--text-sub); opacity: 0.7; }
+
+            .heatmap-main { display: flex; flex-direction: column; }
+            .heatmap-months { display: flex; gap: 4px; margin-bottom: 6px; height: 12px; }
+            .month-label { width: 12px; font-size: 9px; color: var(--text-sub); overflow: visible; white-space: nowrap; }
+
+            /* Custom Tooltip */
+            .g-tooltip {
+                position: fixed; background: rgba(0,0,0,0.9); border: 1px solid var(--border);
+                color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px;
+                pointer-events: none; z-index: 2147483647; opacity: 0; transition: opacity 0.1s;
+                transform: translate(-50%, -100%); margin-top: -8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            }
+            .g-tooltip.visible { opacity: 1; }
+
+            /* Level Colors */
+            .l-0 { background: var(--btn-bg, rgba(255,255,255,0.05)); }
+            .l-1 { background: rgba(138, 180, 248, 0.2); }
+            .l-2 { background: rgba(138, 180, 248, 0.4); }
+            .l-3 { background: rgba(138, 180, 248, 0.7); }
+            .l-4 { background: rgba(138, 180, 248, 1.0); }
+
+            /* Details Pane Tab Bar */
+            .details-tab-bar {
+                display: flex; gap: 2px; padding: 0 0 8px 0;
+                border-bottom: 1px solid var(--divider, rgba(255,255,255,0.05));
+                margin-bottom: 8px;
+            }
+            .details-tab {
+                flex: 1; padding: 5px 0; text-align: center;
+                font-size: 12px; cursor: pointer; border-radius: 6px;
+                color: var(--text-sub); transition: all 0.2s;
+                background: transparent;
+            }
+            .details-tab:hover { background: var(--row-hover); color: var(--text-main); }
+            .details-tab.active {
+                background: var(--accent); color: #000; font-weight: 600;
+            }
+
+            /* Module Toggle Compact */
+            .module-toggle-compact {
+                display: flex; justify-content: space-between; align-items: center;
+                padding: 6px 0; border-bottom: 1px solid var(--divider, rgba(255,255,255,0.05));
+            }
+            .module-compact-label {
+                display: flex; align-items: center; gap: 6px;
+                font-size: 11px; color: var(--text-main);
+            }
+            .module-compact-label .module-icon { font-size: 14px; }
+
+            /* Onboarding Modal */
+            .onboarding-overlay {
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                background: var(--overlay-tint, rgba(0,0,0,0.7)); z-index: 2147483647;
+                display: flex; align-items: center; justify-content: center;
+                animation: overlayIn 0.2s ease-out;
+            }
+            .onboarding-modal {
+                width: 400px; max-width: 92vw; max-height: 80vh; overflow-y: auto;
+                background: var(--bg, #202124); border: 1px solid var(--border, rgba(255,255,255,0.1));
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                border-radius: 20px; box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.2);
+                font-family: 'Google Sans', Roboto, sans-serif;
+                animation: modalIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .onboarding-header {
+                padding: 16px 20px; border-bottom: 1px solid var(--divider, rgba(255,255,255,0.08));
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .onboarding-header h3 { margin: 0; font-size: 16px; color: var(--text-main, #fff); font-weight: 500; }
+            .onboarding-close { cursor: pointer; font-size: 18px; color: var(--text-sub, #9aa0a6); }
+            .onboarding-close:hover { color: var(--accent, #8ab4f8); }
+            .onboarding-body { padding: 16px 20px; }
+            .onboarding-section { margin-bottom: 16px; }
+            .onboarding-section-title {
+                font-size: 13px; font-weight: 600; color: var(--accent, #8ab4f8);
+                margin-bottom: 6px;
+            }
+            .onboarding-text {
+                font-size: 12px; color: var(--text-sub, #9aa0a6); line-height: 1.6;
+                white-space: pre-line;
+            }
+            .onboarding-footer {
+                padding: 12px 20px; border-top: 1px solid var(--divider, rgba(255,255,255,0.08));
+                display: flex; justify-content: space-between; align-items: center;
+            }
+            .onboarding-lang-btn {
+                background: var(--btn-bg, rgba(255,255,255,0.06)); border: 1px solid var(--border);
+                color: var(--text-sub); border-radius: 8px; padding: 4px 10px;
+                font-size: 11px; cursor: pointer;
+            }
+            .onboarding-lang-btn:hover { color: var(--text-main); }
+            .onboarding-start-btn {
+                background: var(--accent, #8ab4f8); color: #000; border: none;
+                border-radius: 8px; padding: 6px 16px; font-size: 12px;
+                font-weight: 600; cursor: pointer;
+            }
+            .onboarding-start-btn:hover { opacity: 0.9; }
+            .onboarding-info-btn {
+                font-size: 11px; color: var(--text-sub, #9aa0a6); cursor: pointer;
+                opacity: 0.5; margin-left: 4px;
+            }
+            .onboarding-info-btn:hover { opacity: 1; color: var(--accent, #8ab4f8); }
+
+            /* Native UI shared styles */
+            .gc-native-btn {
+                background: transparent; border: none; cursor: pointer;
+                font-size: 16px; padding: 4px 6px; border-radius: 50%;
+                transition: background 0.2s;
+                line-height: 1;
+            }
+            .gc-native-btn:hover { background: rgba(128,128,128,0.2); }
+            .gc-dropdown-menu {
+                position: absolute; z-index: 2147483646;
+                background: var(--bg, #303134); border: 1px solid rgba(255,255,255,0.12);
+                border-top: 1px solid var(--highlight, rgba(255,255,255,0.08));
+                border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 12px 32px rgba(0,0,0,0.2);
+                padding: 4px 0; min-width: 160px;
+                font-family: 'Google Sans', Roboto, sans-serif;
+                animation: modalIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .gc-dropdown-item {
+                padding: 8px 16px; font-size: 13px; color: #e8eaed;
+                cursor: pointer; display: flex; align-items: center; gap: 8px;
+            }
+            .gc-dropdown-item:hover { background: rgba(255,255,255,0.08); }
+        `);
+        },
+        // --- 面板创建 ---
+        create() {
+          try {
+            const container = document.createElement("div");
+            container.id = PANEL_ID;
+            container.className = "notranslate";
+            container.setAttribute("translate", "no");
+            let pos = DEFAULT_POS;
+            try {
+              pos = GM_getValue(GLOBAL_KEYS.POS, DEFAULT_POS);
+            } catch (e) {
+            }
+            this.applyPos(container, pos);
+            Core.applyTheme(container, getCurrentTheme());
+            const header = document.createElement("div");
+            header.className = "gemini-header";
+            const userCapsule = document.createElement("div");
+            userCapsule.id = "g-user-capsule";
+            userCapsule.className = "user-capsule";
+            const toggle = document.createElement("span");
+            toggle.className = "gemini-toggle-btn";
+            toggle.appendChild(createIcon("menu", 14));
+            toggle.onpointerdown = (e) => e.stopPropagation();
+            toggle.onclick = () => this.toggleDetails();
+            header.appendChild(userCapsule);
+            header.appendChild(toggle);
+            const mainView = document.createElement("div");
+            mainView.className = "gemini-main-view";
+            const bigDisplay = document.createElement("div");
+            bigDisplay.id = "g-big-display";
+            bigDisplay.className = "gemini-big-num";
+            bigDisplay.textContent = "0";
+            const modelRow = document.createElement("div");
+            modelRow.id = "g-model-row";
+            modelRow.className = "gemini-model-row";
+            const modelBadge = document.createElement("span");
+            modelBadge.id = "g-model-badge";
+            modelBadge.className = "model-badge";
+            modelRow.appendChild(modelBadge);
+            const subInfo = document.createElement("div");
+            subInfo.id = "g-sub-info";
+            subInfo.className = "gemini-sub-info";
+            subInfo.textContent = "Today";
+            const quotaWrap = document.createElement("div");
+            quotaWrap.id = "g-quota-wrap";
+            quotaWrap.className = "quota-bar-wrap";
+            const quotaFill = document.createElement("div");
+            quotaFill.id = "g-quota-fill";
+            quotaFill.className = "quota-bar-fill";
+            quotaWrap.appendChild(quotaFill);
+            const quotaLabel = document.createElement("div");
+            quotaLabel.id = "g-quota-label";
+            quotaLabel.className = "quota-label";
+            const actionBtn = document.createElement("button");
+            actionBtn.id = "g-action-btn";
+            actionBtn.className = "g-btn";
+            actionBtn.textContent = "Reset Today";
+            actionBtn.onclick = () => CounterModule.handleReset();
+            actionBtn.onpointerdown = (e) => e.stopPropagation();
+            mainView.appendChild(bigDisplay);
+            mainView.appendChild(modelRow);
+            mainView.appendChild(subInfo);
+            mainView.appendChild(quotaWrap);
+            mainView.appendChild(quotaLabel);
+            mainView.appendChild(actionBtn);
+            const details = document.createElement("div");
+            details.id = "g-details-pane";
+            details.className = "gemini-details-view";
+            container.appendChild(header);
+            container.appendChild(mainView);
+            container.appendChild(details);
+            document.body.appendChild(container);
+            this.makeDraggable(container, header);
+            this.renderDetailsPane();
+            this.update();
+          } catch (e) {
+            console.error("Panel init error", e);
+          }
+        },
+        // --- 详情面板渲染 ---
+        renderDetailsPane() {
+          const pane = document.getElementById("g-details-pane");
+          if (!pane) return;
+          pane.replaceChildren();
+          const tabs = [{ id: "stats", iconName: "chart" }];
+          Object.keys(ModuleRegistry.modules).forEach((id) => {
+            const mod = ModuleRegistry.modules[id];
+            if (mod && ModuleRegistry.isEnabled(id) && typeof mod.renderToDetailsPane === "function") {
+              tabs.push({ id, iconName: MODULE_ICON_MAP[id] || null, icon: mod.icon });
+            }
+          });
+          if (!tabs.find((t) => t.id === this._activeTab)) this._activeTab = "stats";
+          if (tabs.length > 1) {
+            const tabBar = document.createElement("div");
+            tabBar.className = "details-tab-bar";
+            tabs.forEach((t) => {
+              const tab = document.createElement("div");
+              tab.className = `details-tab ${t.id === this._activeTab ? "active" : ""}`;
+              if (t.iconName) {
+                tab.appendChild(createIcon(t.iconName, 14));
+              } else {
+                tab.textContent = t.icon;
+              }
+              tab.title = t.id;
+              tab.onclick = (e) => {
+                e.stopPropagation();
+                this._activeTab = t.id;
+                this.renderDetailsPane();
+              };
+              tabBar.appendChild(tab);
+            });
+            pane.appendChild(tabBar);
+          }
+          if (this._activeTab === "stats") {
+            this._renderStatsTab(pane);
+          } else {
+            const mod = ModuleRegistry.modules[this._activeTab];
+            if (mod && typeof mod.renderToDetailsPane === "function") {
+              mod.renderToDetailsPane(pane);
+            }
+          }
+        },
+        // --- Stats tab content (original Statistics + Profiles + Themes + Actions) ---
+        _renderStatsTab(pane) {
+          const cm = CounterModule;
+          const user = Core.getCurrentUser();
+          const inspecting = Core.getInspectingUser();
+          pane.appendChild(this.createSectionTitle("Statistics"));
+          const cid = Core.getChatId();
+          pane.appendChild(this.createRow("Today", "today", cm.getTodayMessages()));
+          pane.appendChild(this.createRow("Current Chat", "chat", cid ? cm.state.chats[cid] || 0 : 0));
+          pane.appendChild(this.createRow("Chats Created", "chatsCreated", cm.state.totalChatsCreated));
+          pane.appendChild(this.createRow("Lifetime", "total", cm.state.total));
+          const byModel = cm.getTodayByModel();
+          const hasModelData = byModel.flash || byModel.thinking || byModel.pro;
+          if (hasModelData) {
+            const modelRow = document.createElement("div");
+            modelRow.className = "detail-row model-breakdown";
+            modelRow.style.cssText = "display: flex; gap: 10px; font-size: 10px; padding: 4px 8px; color: var(--text-sub);";
+            const models = [
+              { key: "flash", label: "Flash", color: QUOTA_COLORS.safe },
+              { key: "thinking", label: "Think", color: QUOTA_COLORS.warn },
+              { key: "pro", label: "Pro", color: QUOTA_COLORS.danger }
+            ];
+            models.forEach((m) => {
+              const span = document.createElement("span");
+              span.style.cssText = "display: flex; align-items: center; gap: 3px;";
+              const dot = document.createElement("span");
+              dot.style.cssText = `width: 6px; height: 6px; border-radius: 50%; background: ${m.color}; display: inline-block;`;
+              const num = document.createElement("span");
+              num.textContent = byModel[m.key] || 0;
+              span.appendChild(dot);
+              span.appendChild(num);
+              modelRow.appendChild(span);
+            });
+            pane.appendChild(modelRow);
+          }
+          pane.appendChild(this.createSectionTitle("Profiles"));
+          const users = Core.getAllUsers();
+          const sortedUsers = users.sort((a, b) => a === user ? -1 : b === user ? 1 : a.localeCompare(b));
+          if (sortedUsers.length === 0 && user === TEMP_USER) {
+            const row = document.createElement("div");
+            row.className = "detail-row";
+            row.textContent = "Waiting for login...";
+            pane.appendChild(row);
+          } else {
+            sortedUsers.forEach((uid) => {
+              const row = document.createElement("div");
+              row.className = `detail-row user-row ${uid === user ? "is-me" : ""} ${uid === inspecting ? "active-mode" : ""}`;
+              row.onclick = (e) => {
+                e.stopPropagation();
+                Core.setInspectingUser(uid);
+                cm.loadDataForUser(uid);
+                cm.state.viewMode = "total";
+                this.renderDetailsPane();
+              };
+              const nameSpan = document.createElement("span");
+              nameSpan.textContent = uid.split("@")[0];
+              row.appendChild(nameSpan);
+              if (uid === user) {
+                const meBadge = document.createElement("span");
+                meBadge.className = "user-indicator";
+                meBadge.textContent = "ME";
+                row.appendChild(meBadge);
+              }
+              pane.appendChild(row);
+            });
+          }
+          pane.appendChild(this.createSectionTitle("Themes"));
+          const themes = Core.getThemes();
+          Object.keys(themes).forEach((key) => {
+            const row = document.createElement("div");
+            row.className = `detail-row ${getCurrentTheme() === key ? "active-mode" : ""}`;
+            row.textContent = themes[key].name;
+            row.onclick = (e) => {
+              e.stopPropagation();
+              Core.setTheme(key);
+              setCurrentTheme(key);
+              const panel = document.getElementById(PANEL_ID);
+              Core.applyTheme(panel, key);
+              this.renderDetailsPane();
+            };
+            pane.appendChild(row);
+          });
+          pane.appendChild(this.createSectionTitle(""));
+          const actionsRow = document.createElement("div");
+          actionsRow.style.display = "flex";
+          actionsRow.style.gap = "8px";
+          const statsBtn = document.createElement("button");
+          statsBtn.className = "g-btn";
+          statsBtn.textContent = "";
+          setIconText(statsBtn, "chart", "Stats");
+          statsBtn.style.flex = "1";
+          statsBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.openDashboard();
+          };
+          const settingsBtn = document.createElement("button");
+          settingsBtn.className = "g-btn";
+          settingsBtn.appendChild(createIcon("settings", 14));
+          settingsBtn.style.width = "32px";
+          settingsBtn.title = "Settings";
+          settingsBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.openSettingsModal();
+          };
+          actionsRow.appendChild(statsBtn);
+          actionsRow.appendChild(settingsBtn);
+          pane.appendChild(actionsRow);
+        },
+        createSectionTitle(text) {
+          const div = document.createElement("div");
+          div.className = "section-title";
+          div.textContent = text;
+          return div;
+        },
+        createRow(label, mode, val) {
+          const cm = CounterModule;
+          const user = Core.getCurrentUser();
+          const inspecting = Core.getInspectingUser();
+          const row = document.createElement("div");
+          row.className = `detail-row ${cm.state.viewMode === mode && inspecting === user ? "active-mode" : ""}`;
+          const labelSpan = document.createElement("span");
+          labelSpan.textContent = label;
+          const valSpan = document.createElement("span");
+          valSpan.className = "detail-val";
+          valSpan.textContent = val;
+          row.appendChild(labelSpan);
+          row.appendChild(valSpan);
+          row.onclick = (e) => {
+            e.stopPropagation();
+            if (inspecting !== user) {
+              Core.setInspectingUser(user);
+              cm.loadDataForUser(user);
+            }
+            cm.state.viewMode = mode;
+            cm.state.resetStep = 0;
+            this.update();
+            this.renderDetailsPane();
+          };
+          return row;
+        },
+        // --- UI 更新 ---
+        update() {
+          const cm = CounterModule;
+          const user = Core.getCurrentUser();
+          const inspecting = Core.getInspectingUser();
+          const bigDisplay = document.getElementById("g-big-display");
+          const subInfo = document.getElementById("g-sub-info");
+          const actionBtn = document.getElementById("g-action-btn");
+          const capsule = document.getElementById("g-user-capsule");
+          const modelBadge = document.getElementById("g-model-badge");
+          const quotaFill = document.getElementById("g-quota-fill");
+          const quotaLabel = document.getElementById("g-quota-label");
+          if (!bigDisplay) return;
+          const isMe = inspecting === user;
+          const displayName = inspecting === TEMP_USER ? "Guest" : inspecting.split("@")[0];
+          capsule.replaceChildren();
+          const dot = document.createElement("div");
+          dot.className = "user-avatar-dot";
+          const name = document.createElement("span");
+          name.textContent = displayName;
+          name.style.overflow = "hidden";
+          name.style.textOverflow = "ellipsis";
+          name.style.whiteSpace = "nowrap";
+          capsule.appendChild(dot);
+          capsule.appendChild(name);
+          if (cm.accountType && cm.accountType !== "free") {
+            const acctBadgeInline = document.createElement("span");
+            acctBadgeInline.className = "acct-badge-inline";
+            acctBadgeInline.dataset.tier = cm.accountType;
+            const acctLabels = { free: "Free", pro: "Pro", ultra: "Ultra" };
+            acctBadgeInline.textContent = acctLabels[cm.accountType] || "Free";
+            acctBadgeInline.title = "Account Tier";
+            capsule.appendChild(acctBadgeInline);
+          }
+          if (!isMe) {
+            capsule.classList.add("viewing-other");
+            capsule.title = "Viewing other user (Read Only)";
+          } else {
+            capsule.classList.remove("viewing-other");
+            capsule.title = "Active User";
+          }
+          if (modelBadge) {
+            const mc = cm.MODEL_CONFIG[cm.currentModel];
+            if (!mc) return;
+            modelBadge.textContent = mc.label;
+            modelBadge.style.background = mc.color;
+            modelBadge.style.color = cm.currentModel === "flash" ? "#000" : "#fff";
+          }
+          let val = 0, sub = "", btn = "Reset";
+          let disableBtn = !isMe;
+          if (cm.state.viewMode === "today") {
+            val = cm.getTodayMessages();
+            sub = `Today (Reset @${cm.resetHour}:00)`;
+            btn = "Reset Today";
+            if (!isMe) {
+              sub = `Today (${inspecting.split("@")[0]})`;
+            }
+          } else if (cm.state.viewMode === "chat") {
+            if (!isMe) {
+              val = "--";
+              sub = "Different Context";
+              disableBtn = true;
+            } else {
+              const cid = Core.getChatId();
+              val = cid ? cm.state.chats[cid] || 0 : 0;
+              sub = cid ? `ID: ${cid.slice(0, 8)}...` : "ID: New Chat";
+              btn = "Reset Chat";
+            }
+          } else if (cm.state.viewMode === "chatsCreated") {
+            val = cm.state.totalChatsCreated;
+            sub = "Chats Created";
+            btn = "View Only";
+            disableBtn = true;
+          } else if (cm.state.viewMode === "total") {
+            val = cm.state.total;
+            sub = "Lifetime History";
+            btn = "Clear History";
+          }
+          const numericVal = typeof val === "number" ? val : -1;
+          if (numericVal !== cm.lastDisplayedVal && cm.lastDisplayedVal !== -1 && numericVal > cm.lastDisplayedVal) {
+            bigDisplay.classList.remove("bump");
+            void bigDisplay.offsetWidth;
+            bigDisplay.classList.add("bump");
+          }
+          cm.lastDisplayedVal = numericVal;
+          bigDisplay.textContent = val;
+          subInfo.textContent = sub;
+          if (quotaFill && quotaLabel) {
+            const used = cm.getTodayMessages();
+            const weighted = cm.getWeightedQuota();
+            const pct = Math.min(weighted / cm.quotaLimit * 100, 100);
+            quotaFill.style.width = pct + "%";
+            if (pct < 60) quotaFill.style.background = QUOTA_COLORS.safe;
+            else if (pct < 85) quotaFill.style.background = QUOTA_COLORS.warn;
+            else quotaFill.style.background = QUOTA_COLORS.danger;
+            const weightedStr = weighted % 1 === 0 ? String(weighted) : weighted.toFixed(1);
+            quotaLabel.textContent = `${used} msgs (${weightedStr} weighted) / ${cm.quotaLimit}`;
+          }
+          if (disableBtn) {
+            actionBtn.textContent = "View Only";
+            actionBtn.className = "g-btn disabled";
+            actionBtn.disabled = true;
+          } else {
+            actionBtn.disabled = false;
+            if (cm.state.resetStep === 0) {
+              actionBtn.textContent = btn;
+              actionBtn.className = "g-btn";
+            } else {
+              actionBtn.textContent = cm.state.resetStep === 1 ? "Sure?" : "Really?";
+              actionBtn.className = `g-btn danger-${cm.state.resetStep}`;
+            }
+          }
+        },
+        toggleDetails() {
+          const cm = CounterModule;
+          cm.state.isExpanded = !cm.state.isExpanded;
+          const pane = document.getElementById("g-details-pane");
+          if (pane) {
+            if (cm.state.isExpanded) {
+              pane.classList.add("expanded");
+              this.renderDetailsPane();
+            } else {
+              pane.classList.remove("expanded");
+              cm.state.resetStep = 0;
+            }
+            this.update();
+          }
+        },
+        // --- 位置管理 ---
+        applyPos(el, pos) {
+          const winW = window.innerWidth;
+          const winH = window.innerHeight;
+          const savedLeft = parseFloat(pos.left) || 0;
+          const savedTop = parseFloat(pos.top) || 0;
+          if (pos.left !== "auto" && pos.top !== "auto" && (savedLeft > winW - 50 || savedTop > winH - 50)) {
+            console.warn(`💎 Panel off-screen detected. Resetting.`);
+            pos = DEFAULT_POS;
+            try {
+              GM_setValue(GLOBAL_KEYS.POS, DEFAULT_POS);
+            } catch {
+            }
+            ;
+          }
+          el.style.top = pos.top;
+          el.style.left = pos.left;
+          el.style.bottom = pos.bottom;
+          el.style.right = pos.right;
+        },
+        makeDraggable(el, handle) {
+          if (this._dragMove) document.removeEventListener("pointermove", this._dragMove);
+          if (this._dragUp) document.removeEventListener("pointerup", this._dragUp);
+          handle.style.touchAction = "none";
+          let isDragging = false, startX, startY, iLeft, iTop;
+          handle.onpointerdown = (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = el.getBoundingClientRect();
+            iLeft = rect.left;
+            iTop = rect.top;
+            el.style.bottom = "auto";
+            el.style.right = "auto";
+            el.style.left = iLeft + "px";
+            el.style.top = iTop + "px";
+            handle.style.cursor = "grabbing";
+            handle.setPointerCapture(e.pointerId);
+          };
+          this._dragMove = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            let nL = iLeft + e.clientX - startX;
+            let nT = iTop + e.clientY - startY;
+            if (nT < 10) nT = 10;
+            if (nL < 0) nL = 0;
+            if (nL + el.offsetWidth > window.innerWidth) nL = window.innerWidth - el.offsetWidth;
+            if (nT + el.offsetHeight > window.innerHeight) nT = window.innerHeight - el.offsetHeight;
+            el.style.left = nL + "px";
+            el.style.top = nT + "px";
+          };
+          this._dragUp = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            handle.style.cursor = "grab";
+            try {
+              GM_setValue(GLOBAL_KEYS.POS, { top: el.style.top, left: el.style.left, bottom: "auto", right: "auto" });
+            } catch {
+            }
+          };
+          document.addEventListener("pointermove", this._dragMove);
+          document.addEventListener("pointerup", this._dragUp);
+        },
+        destroy() {
+          if (this._dragMove) document.removeEventListener("pointermove", this._dragMove);
+          if (this._dragUp) document.removeEventListener("pointerup", this._dragUp);
+          this._dragMove = null;
+          this._dragUp = null;
+        },
+        // --- Settings Modal ---
+        openSettingsModal() {
+          const SETTINGS_MODAL_ID = "gemini-settings-modal";
+          if (document.getElementById(SETTINGS_MODAL_ID)) return;
+          const overlay = document.createElement("div");
+          overlay.id = SETTINGS_MODAL_ID;
+          overlay.className = "settings-overlay";
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeOverlay();
+          };
+          document.addEventListener("keydown", escHandler);
+          const closeOverlay = () => {
+            document.removeEventListener("keydown", escHandler);
+            overlay.remove();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeOverlay();
+          };
+          const modal = document.createElement("div");
+          modal.className = "settings-modal";
+          Core.applyTheme(modal, getCurrentTheme());
+          const header = document.createElement("div");
+          header.className = "settings-header";
+          const title = document.createElement("h3");
+          setIconText(title, "settings", "Settings");
+          const closeBtn = document.createElement("span");
+          closeBtn.className = "settings-close";
+          closeBtn.appendChild(createIcon("x", 16));
+          closeBtn.onclick = () => closeOverlay();
+          header.appendChild(title);
+          header.appendChild(closeBtn);
+          const body = document.createElement("div");
+          body.className = "settings-body";
+          const extSection = document.createElement("div");
+          extSection.className = "settings-section";
+          const extTitle = document.createElement("div");
+          extTitle.className = "settings-section-title";
+          extTitle.textContent = "";
+          setIconText(extTitle, "package", "Feature Extensions");
+          extSection.appendChild(extTitle);
+          ModuleRegistry.getAll().forEach((mod) => {
+            const row = document.createElement("div");
+            row.className = "module-toggle-compact";
+            row.title = mod.description;
+            const label = document.createElement("div");
+            label.className = "module-compact-label";
+            const icon = document.createElement("span");
+            icon.className = "module-icon";
+            icon.appendChild(renderModIcon(mod, 16));
+            const name = document.createElement("span");
+            name.textContent = mod.name;
+            label.appendChild(icon);
+            label.appendChild(name);
+            const rightSide = document.createElement("div");
+            rightSide.style.cssText = "display:flex;align-items:center;gap:6px;";
+            if (typeof mod.getOnboarding === "function") {
+              const infoBtn = document.createElement("span");
+              infoBtn.className = "onboarding-info-btn";
+              infoBtn.appendChild(createIcon("info", 12));
+              infoBtn.title = "Show guide";
+              infoBtn.onclick = (e) => {
+                e.stopPropagation();
+                PanelUI.showOnboarding(mod.id);
+              };
+              rightSide.appendChild(infoBtn);
+            }
+            const toggle = document.createElement("div");
+            toggle.className = `toggle-switch ${ModuleRegistry.isEnabled(mod.id) ? "on" : ""}`;
+            toggle.onclick = () => {
+              ModuleRegistry.toggle(mod.id);
+              toggle.classList.toggle("on");
+              if (CounterModule.state.isExpanded) {
+                PanelUI.renderDetailsPane();
+              }
+            };
+            rightSide.appendChild(toggle);
+            row.appendChild(label);
+            row.appendChild(rightSide);
+            extSection.appendChild(row);
+          });
+          body.appendChild(extSection);
+          ModuleRegistry.getAll().forEach((mod) => {
+            if (ModuleRegistry.isEnabled(mod.id) && typeof mod.renderToSettings === "function") {
+              const modSection = document.createElement("div");
+              modSection.className = "settings-section";
+              const modTitle = document.createElement("div");
+              modTitle.className = "settings-section-title";
+              modTitle.textContent = "";
+              modTitle.appendChild(renderModIcon(mod, 12));
+              modTitle.appendChild(document.createTextNode(" " + mod.name + " Settings"));
+              modSection.appendChild(modTitle);
+              mod.renderToSettings(modSection);
+              body.appendChild(modSection);
+            }
+          });
+          const cm = CounterModule;
+          const resetSection = document.createElement("div");
+          resetSection.className = "settings-section";
+          const resetTitle = document.createElement("div");
+          resetTitle.className = "settings-section-title";
+          resetTitle.textContent = "Daily Reset";
+          resetSection.appendChild(resetTitle);
+          const resetRow = document.createElement("div");
+          resetRow.className = "settings-row";
+          const resetLabel = document.createElement("span");
+          resetLabel.className = "settings-label";
+          resetLabel.textContent = "Reset Hour";
+          const resetSelect = document.createElement("select");
+          resetSelect.className = "settings-select";
+          for (let h = 0; h < 24; h++) {
+            const opt = document.createElement("option");
+            opt.value = h;
+            opt.textContent = `${h.toString().padStart(2, "0")}:00`;
+            if (h === cm.resetHour) opt.selected = true;
+            resetSelect.appendChild(opt);
+          }
+          resetSelect.onchange = () => {
+            cm.resetHour = parseInt(resetSelect.value, 10);
+            try {
+              GM_setValue(GLOBAL_KEYS.RESET_HOUR, cm.resetHour);
+            } catch {
+            }
+            this.update();
+          };
+          resetRow.appendChild(resetLabel);
+          resetRow.appendChild(resetSelect);
+          resetSection.appendChild(resetRow);
+          body.appendChild(resetSection);
+          const quotaSection = document.createElement("div");
+          quotaSection.className = "settings-section";
+          const quotaTitle = document.createElement("div");
+          quotaTitle.className = "settings-section-title";
+          quotaTitle.textContent = "Daily Quota";
+          quotaSection.appendChild(quotaTitle);
+          const quotaRow = document.createElement("div");
+          quotaRow.className = "settings-row";
+          const quotaLabelEl = document.createElement("span");
+          quotaLabelEl.className = "settings-label";
+          quotaLabelEl.textContent = "Message Limit";
+          const quotaInput = document.createElement("input");
+          quotaInput.type = "number";
+          quotaInput.min = "1";
+          quotaInput.max = "999";
+          quotaInput.value = cm.quotaLimit;
+          quotaInput.className = "settings-select";
+          quotaInput.style.width = "60px";
+          quotaInput.style.textAlign = "center";
+          quotaInput.onchange = () => {
+            const v = parseInt(quotaInput.value, 10);
+            if (v > 0 && v <= 999) {
+              cm.quotaLimit = v;
+              try {
+                GM_setValue(GLOBAL_KEYS.QUOTA, v);
+              } catch {
+              }
+              this.update();
+            }
+          };
+          quotaRow.appendChild(quotaLabelEl);
+          quotaRow.appendChild(quotaInput);
+          quotaSection.appendChild(quotaRow);
+          body.appendChild(quotaSection);
+          const chartSection = document.createElement("div");
+          chartSection.className = "settings-section";
+          const chartTitle = document.createElement("div");
+          chartTitle.className = "settings-section-title";
+          chartTitle.textContent = "Usage History (Last 7 Days)";
+          chartSection.appendChild(chartTitle);
+          const chartContainer = document.createElement("div");
+          chartContainer.style.cssText = "background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; margin-top: 4px;";
+          const data = cm.getLast7DaysData();
+          const svgWidth = 268, svgHeight = 80, padding = 20;
+          const maxVal = Math.max(...data.map((d) => d.messages), 1);
+          const points = data.map((d, i) => ({
+            x: padding + i * ((svgWidth - 2 * padding) / 6),
+            y: svgHeight - padding - d.messages / maxVal * (svgHeight - 2 * padding),
+            val: d.messages,
+            label: d.label
+          }));
+          const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+          svg.setAttribute("width", svgWidth);
+          svg.setAttribute("height", svgHeight + 20);
+          svg.setAttribute("viewBox", `0 0 ${svgWidth} ${svgHeight + 20}`);
+          const areaPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const areaD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ") + ` L ${points[6].x} ${svgHeight - padding} L ${points[0].x} ${svgHeight - padding} Z`;
+          areaPath.setAttribute("d", areaD);
+          areaPath.setAttribute("fill", "rgba(138, 180, 248, 0.2)");
+          svg.appendChild(areaPath);
+          const linePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const lineD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+          linePath.setAttribute("d", lineD);
+          linePath.setAttribute("fill", "none");
+          linePath.setAttribute("stroke", "var(--accent, #8ab4f8)");
+          linePath.setAttribute("stroke-width", "2");
+          linePath.setAttribute("stroke-linecap", "round");
+          linePath.setAttribute("stroke-linejoin", "round");
+          svg.appendChild(linePath);
+          points.forEach((p) => {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", p.x);
+            circle.setAttribute("cy", p.y);
+            circle.setAttribute("r", "3");
+            circle.setAttribute("fill", "var(--accent, #8ab4f8)");
+            svg.appendChild(circle);
+            if (p.val > 0) {
+              const valText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+              valText.setAttribute("x", p.x);
+              valText.setAttribute("y", p.y - 6);
+              valText.setAttribute("text-anchor", "middle");
+              valText.setAttribute("font-size", "8");
+              valText.setAttribute("fill", "var(--text-sub, #9aa0a6)");
+              valText.textContent = p.val;
+              svg.appendChild(valText);
+            }
+            const dateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            dateText.setAttribute("x", p.x);
+            dateText.setAttribute("y", svgHeight + 10);
+            dateText.setAttribute("text-anchor", "middle");
+            dateText.setAttribute("font-size", "8");
+            dateText.setAttribute("fill", "var(--text-sub, #9aa0a6)");
+            dateText.textContent = p.label;
+            svg.appendChild(dateText);
+          });
+          chartContainer.appendChild(svg);
+          chartSection.appendChild(chartContainer);
+          body.appendChild(chartSection);
+          const dataSection = document.createElement("div");
+          dataSection.className = "settings-section";
+          const dataTitle = document.createElement("div");
+          dataTitle.className = "settings-section-title";
+          dataTitle.textContent = "Data";
+          dataSection.appendChild(dataTitle);
+          if (ModuleRegistry.isEnabled("export")) {
+            ExportModule.renderExportButtons(dataSection);
+          } else {
+            const exportBtn = document.createElement("button");
+            exportBtn.className = "settings-btn";
+            setIconText(exportBtn, "download", "Export Data (JSON)");
+            exportBtn.onclick = () => {
+              const exportData = {
+                total: cm.state.total,
+                totalChatsCreated: cm.state.totalChatsCreated,
+                chats: cm.state.chats,
+                dailyCounts: cm.state.dailyCounts,
+                exportedAt: (/* @__PURE__ */ new Date()).toISOString()
+              };
+              const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              const _d = /* @__PURE__ */ new Date();
+              a.download = `gemini-counter-${Core.getCurrentUser().split("@")[0]}-${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+            };
+            dataSection.appendChild(exportBtn);
+          }
+          const calibrateBtn = document.createElement("button");
+          calibrateBtn.className = "settings-btn";
+          setIconText(calibrateBtn, "wrench", "Calibrate Data");
+          calibrateBtn.onclick = () => this.openCalibrationModal();
+          dataSection.appendChild(calibrateBtn);
+          const resetPosBtn = document.createElement("button");
+          resetPosBtn.className = "settings-btn";
+          setIconText(resetPosBtn, "pin", "Reset Panel Position");
+          resetPosBtn.onclick = () => {
+            try {
+              GM_setValue(GLOBAL_KEYS.POS, DEFAULT_POS);
+            } catch {
+            }
+            closeOverlay();
+            location.reload();
+          };
+          dataSection.appendChild(resetPosBtn);
+          const tourBtn = document.createElement("button");
+          tourBtn.className = "settings-btn";
+          setIconText(tourBtn, "compass", "Guided Tour");
+          tourBtn.onclick = () => {
+            closeOverlay();
+            GuidedTour.start();
+          };
+          dataSection.appendChild(tourBtn);
+          body.appendChild(dataSection);
+          const debugSection = document.createElement("div");
+          debugSection.className = "settings-section";
+          const debugTitle = document.createElement("div");
+          debugTitle.className = "settings-section-title";
+          debugTitle.textContent = "Debug";
+          debugSection.appendChild(debugTitle);
+          const debugToggleRow = document.createElement("div");
+          debugToggleRow.className = "settings-row";
+          const debugLabel = document.createElement("span");
+          debugLabel.className = "settings-label";
+          debugLabel.textContent = "Enable Debug";
+          const debugToggle = document.createElement("div");
+          debugToggle.className = `toggle-switch ${isDebugEnabled() ? "on" : ""}`;
+          debugToggle.onclick = () => {
+            const enabled = !isDebugEnabled();
+            setDebugEnabled(enabled);
+            debugToggle.classList.toggle("on");
+            Logger.info("Debug mode toggled", { enabled });
+          };
+          debugToggleRow.appendChild(debugLabel);
+          debugToggleRow.appendChild(debugToggle);
+          debugSection.appendChild(debugToggleRow);
+          const logLevelRow = document.createElement("div");
+          logLevelRow.className = "settings-row";
+          const logLevelLabel = document.createElement("span");
+          logLevelLabel.className = "settings-label";
+          logLevelLabel.textContent = "Log Level";
+          const logSelect = document.createElement("select");
+          logSelect.className = "settings-select";
+          ["error", "warn", "info", "debug"].forEach((lvl) => {
+            const opt = document.createElement("option");
+            opt.value = lvl;
+            opt.textContent = lvl.toUpperCase();
+            if (lvl === Logger.getLevel()) opt.selected = true;
+            logSelect.appendChild(opt);
+          });
+          logSelect.onchange = () => Logger.setLevel(logSelect.value);
+          logLevelRow.appendChild(logLevelLabel);
+          logLevelRow.appendChild(logSelect);
+          debugSection.appendChild(logLevelRow);
+          const debugPanelBtn = document.createElement("button");
+          debugPanelBtn.className = "settings-btn";
+          setIconText(debugPanelBtn, "bug", "Open Debug Panel");
+          debugPanelBtn.onclick = () => this.openDebugModal();
+          debugSection.appendChild(debugPanelBtn);
+          body.appendChild(debugSection);
+          const version = document.createElement("div");
+          version.className = "settings-version";
+          version.textContent = "Gemini Primer++ v" + VERSION;
+          body.appendChild(version);
+          modal.appendChild(header);
+          modal.appendChild(body);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+        },
+        // --- Onboarding Modal ---
+        showOnboarding(moduleId) {
+          const mod = ModuleRegistry.modules[moduleId];
+          if (!mod || typeof mod.getOnboarding !== "function") return;
+          const content = mod.getOnboarding();
+          if (!content) return;
+          let lang;
+          try {
+            lang = GM_getValue(GLOBAL_KEYS.ONBOARDING_LANG, "zh");
+          } catch {
+            lang = "zh";
+          }
+          const MODAL_ID = "gemini-onboarding-modal";
+          const existing = document.getElementById(MODAL_ID);
+          if (existing) existing.remove();
+          const overlay = document.createElement("div");
+          overlay.id = MODAL_ID;
+          overlay.className = "onboarding-overlay";
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeOverlay();
+          };
+          document.addEventListener("keydown", escHandler);
+          const closeOverlay = () => {
+            document.removeEventListener("keydown", escHandler);
+            overlay.remove();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeOverlay();
+          };
+          const modal = document.createElement("div");
+          modal.className = "onboarding-modal";
+          Core.applyTheme(modal, getCurrentTheme());
+          const renderContent = () => {
+            modal.replaceChildren();
+            const t = content[lang] || content.zh || content.en;
+            const header = document.createElement("div");
+            header.className = "onboarding-header";
+            const title = document.createElement("h3");
+            title.textContent = "";
+            title.appendChild(renderModIcon(mod, 16));
+            title.appendChild(document.createTextNode(" " + mod.name));
+            const closeBtn = document.createElement("span");
+            closeBtn.className = "onboarding-close";
+            closeBtn.appendChild(createIcon("x", 16));
+            closeBtn.onclick = () => closeOverlay();
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+            modal.appendChild(header);
+            const body = document.createElement("div");
+            body.className = "onboarding-body";
+            if (t.rant) {
+              const sec1 = document.createElement("div");
+              sec1.className = "onboarding-section";
+              const h1 = document.createElement("div");
+              h1.className = "onboarding-section-title";
+              h1.textContent = "";
+              h1.appendChild(createIcon("info", 14));
+              h1.appendChild(document.createTextNode(lang === "zh" ? " 为什么需要这个？" : " Why does this exist?"));
+              const p1 = document.createElement("div");
+              p1.className = "onboarding-text";
+              p1.textContent = t.rant;
+              sec1.appendChild(h1);
+              sec1.appendChild(p1);
+              body.appendChild(sec1);
+            }
+            if (t.features) {
+              const sec2 = document.createElement("div");
+              sec2.className = "onboarding-section";
+              const h2 = document.createElement("div");
+              h2.className = "onboarding-section-title";
+              h2.textContent = "";
+              h2.appendChild(createIcon("gem", 14));
+              h2.appendChild(document.createTextNode(lang === "zh" ? " 它能做什么？" : " What does it do?"));
+              const p2 = document.createElement("div");
+              p2.className = "onboarding-text";
+              p2.textContent = t.features;
+              sec2.appendChild(h2);
+              sec2.appendChild(p2);
+              body.appendChild(sec2);
+            }
+            if (t.guide) {
+              const sec3 = document.createElement("div");
+              sec3.className = "onboarding-section";
+              const h3el = document.createElement("div");
+              h3el.className = "onboarding-section-title";
+              h3el.textContent = "";
+              h3el.appendChild(createIcon("wrench", 14));
+              h3el.appendChild(document.createTextNode(lang === "zh" ? " 如何使用？" : " How to use?"));
+              const p3 = document.createElement("div");
+              p3.className = "onboarding-text";
+              p3.textContent = t.guide;
+              sec3.appendChild(h3el);
+              sec3.appendChild(p3);
+              body.appendChild(sec3);
+            }
+            modal.appendChild(body);
+            const footer = document.createElement("div");
+            footer.className = "onboarding-footer";
+            const langBtn = document.createElement("button");
+            langBtn.className = "onboarding-lang-btn";
+            langBtn.textContent = "";
+            langBtn.appendChild(createIcon("globe", 12));
+            langBtn.appendChild(document.createTextNode(lang === "zh" ? " EN" : " 中"));
+            langBtn.onclick = () => {
+              lang = lang === "zh" ? "en" : "zh";
+              try {
+                GM_setValue(GLOBAL_KEYS.ONBOARDING_LANG, lang);
+              } catch {
+              }
+              renderContent();
+            };
+            const startBtn = document.createElement("button");
+            startBtn.className = "onboarding-start-btn";
+            startBtn.textContent = lang === "zh" ? "开始使用 →" : "Get Started →";
+            startBtn.onclick = () => closeOverlay();
+            footer.appendChild(langBtn);
+            footer.appendChild(startBtn);
+            modal.appendChild(footer);
+          };
+          renderContent();
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+        },
+        // --- Debug Modal ---
+        openDebugModal() {
+          const DEBUG_MODAL_ID = "gemini-debug-modal";
+          if (document.getElementById(DEBUG_MODAL_ID)) return;
+          const overlay = document.createElement("div");
+          overlay.id = DEBUG_MODAL_ID;
+          overlay.className = "debug-overlay";
+          let unsubscribe = null;
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeModal();
+          };
+          document.addEventListener("keydown", escHandler);
+          const closeModal = () => {
+            document.removeEventListener("keydown", escHandler);
+            if (unsubscribe) unsubscribe();
+            overlay.remove();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeModal();
+          };
+          const modal = document.createElement("div");
+          modal.className = "debug-modal";
+          Core.applyTheme(modal, getCurrentTheme());
+          const header = document.createElement("div");
+          header.className = "debug-header";
+          const title = document.createElement("h3");
+          setIconText(title, "bug", "Debug Panel");
+          const closeBtn = document.createElement("span");
+          closeBtn.className = "debug-close";
+          closeBtn.appendChild(createIcon("x", 16));
+          closeBtn.onclick = () => closeModal();
+          header.appendChild(title);
+          header.appendChild(closeBtn);
+          const body = document.createElement("div");
+          body.className = "debug-body";
+          const info = document.createElement("div");
+          info.className = "debug-kv";
+          const infoLine = (label, value) => {
+            const div = document.createElement("div");
+            const strong = document.createElement("strong");
+            strong.textContent = label + ":";
+            div.appendChild(strong);
+            div.appendChild(document.createTextNode(" " + value));
+            return div;
+          };
+          const detected = Core.detectUser();
+          const current = Core.getCurrentUser();
+          const inspecting = Core.getInspectingUser();
+          const effective = detected || current;
+          const storageKey = effective && effective.includes("@") ? `gemini_store_${effective}` : "N/A";
+          info.appendChild(infoLine("Detected", detected || "null"));
+          info.appendChild(infoLine("Current", current));
+          info.appendChild(infoLine("Inspecting", inspecting));
+          info.appendChild(infoLine("Storage Key", storageKey));
+          info.appendChild(infoLine("Debug Enabled", String(isDebugEnabled())));
+          info.appendChild(infoLine("Log Level", Logger.getLevel()));
+          const filterRow = document.createElement("div");
+          filterRow.className = "debug-filter-row";
+          const filters = ["all", "error", "warn", "info", "debug"];
+          let activeFilter = "all";
+          let searchTerm = "";
+          const mkFilterBtn = (label) => {
+            const b = document.createElement("button");
+            b.className = "debug-filter-btn";
+            b.textContent = label.toUpperCase();
+            b.onclick = () => {
+              activeFilter = label;
+              Array.from(filterRow.children).forEach((el) => el.classList.remove("active"));
+              b.classList.add("active");
+              renderLogs();
+            };
+            return b;
+          };
+          filters.forEach((f, i) => {
+            const btn = mkFilterBtn(f);
+            if (i === 0) btn.classList.add("active");
+            filterRow.appendChild(btn);
+          });
+          const search = document.createElement("input");
+          search.className = "debug-search";
+          search.placeholder = "Search logs...";
+          search.oninput = () => {
+            searchTerm = search.value.trim().toLowerCase();
+            renderLogs();
+          };
+          const actions = document.createElement("div");
+          actions.className = "debug-actions";
+          const mkBtn = (label, onClick) => {
+            const b = document.createElement("button");
+            b.className = "settings-btn";
+            b.textContent = label;
+            b.onclick = onClick;
+            return b;
+          };
+          actions.appendChild(mkBtn("Show Detected User", () => debugShowDetectedUser()));
+          actions.appendChild(mkBtn("Dump Storage Keys", () => debugDumpStorageKeys()));
+          actions.appendChild(mkBtn("Dump Gemini Storage", () => debugDumpGeminiStores()));
+          actions.appendChild(mkBtn("Export Legacy Data", () => debugExportLegacyData()));
+          actions.appendChild(mkBtn("Export All Storage", () => debugExportAllStorage()));
+          actions.appendChild(mkBtn("Export Logs", () => debugExportLogs()));
+          actions.appendChild(mkBtn("Clear Logs", () => Logger.clear()));
+          const logList = document.createElement("div");
+          logList.className = "debug-log-list";
+          const renderLogs = () => {
+            logList.replaceChildren();
+            let entries = (0, import_debug_logger.filterLogs)(Logger.getEntries(), { level: activeFilter, term: searchTerm }).slice(-120);
+            if (entries.length === 0) {
+              const empty = document.createElement("div");
+              empty.className = "debug-log-item";
+              empty.textContent = "No logs yet.";
+              logList.appendChild(empty);
+              return;
+            }
+            entries.forEach((e) => {
+              const item = document.createElement("div");
+              item.className = "debug-log-item";
+              const meta = `${e.ts}`;
+              const lvl = document.createElement("span");
+              lvl.className = `debug-level ${e.level}`;
+              lvl.textContent = `[${e.level.toUpperCase()}]`;
+              const data = e.data ? ` ${JSON.stringify(e.data)}` : "";
+              item.textContent = `${meta} `;
+              item.appendChild(lvl);
+              item.appendChild(document.createTextNode(` ${e.msg}${data}`));
+              logList.appendChild(item);
+            });
+          };
+          renderLogs();
+          unsubscribe = Logger.subscribe(renderLogs);
+          body.appendChild(info);
+          body.appendChild(filterRow);
+          body.appendChild(search);
+          body.appendChild(actions);
+          body.appendChild(logList);
+          modal.appendChild(header);
+          modal.appendChild(body);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+        },
+        // --- Calibration Modal ---
+        openCalibrationModal() {
+          const MODAL_ID = "gemini-calibrate-modal";
+          if (document.getElementById(MODAL_ID)) return;
+          const cm = CounterModule;
+          const todayKey = Core.getDayKey(cm.resetHour);
+          const overlay = document.createElement("div");
+          overlay.id = MODAL_ID;
+          overlay.className = "settings-overlay";
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeOverlay();
+          };
+          document.addEventListener("keydown", escHandler);
+          const closeOverlay = () => {
+            document.removeEventListener("keydown", escHandler);
+            overlay.remove();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeOverlay();
+          };
+          const modal = document.createElement("div");
+          modal.className = "settings-modal";
+          Core.applyTheme(modal, getCurrentTheme());
+          const header = document.createElement("div");
+          header.className = "settings-header";
+          const title = document.createElement("h3");
+          title.textContent = "Calibrate Data";
+          const closeBtn = document.createElement("span");
+          closeBtn.className = "settings-close";
+          closeBtn.appendChild(createIcon("x", 16));
+          closeBtn.onclick = () => closeOverlay();
+          header.appendChild(title);
+          header.appendChild(closeBtn);
+          const body = document.createElement("div");
+          body.className = "settings-body";
+          const mkField = (label, value) => {
+            const row = document.createElement("div");
+            row.className = "settings-row";
+            const lbl = document.createElement("span");
+            lbl.className = "settings-label";
+            lbl.textContent = label;
+            const input = document.createElement("input");
+            input.type = "number";
+            input.min = "0";
+            input.value = value;
+            input.className = "settings-select";
+            input.style.width = "80px";
+            input.style.textAlign = "center";
+            row.appendChild(lbl);
+            row.appendChild(input);
+            return { row, input };
+          };
+          const section = document.createElement("div");
+          section.className = "settings-section";
+          const sTitle = document.createElement("div");
+          sTitle.className = "settings-section-title";
+          sTitle.textContent = "Adjust Values";
+          section.appendChild(sTitle);
+          const todayField = mkField("Today Messages", cm.state.dailyCounts[todayKey]?.messages || 0);
+          const totalField = mkField("Lifetime Total", cm.state.total);
+          const chatsField = mkField("Chats Created", cm.state.totalChatsCreated);
+          section.appendChild(todayField.row);
+          section.appendChild(totalField.row);
+          section.appendChild(chatsField.row);
+          body.appendChild(section);
+          let chatField = null;
+          const currentCid = Core.getChatId();
+          if (currentCid) {
+            const chatSection = document.createElement("div");
+            chatSection.className = "settings-section";
+            const chatTitle = document.createElement("div");
+            chatTitle.className = "settings-section-title";
+            chatTitle.textContent = "Current Chat";
+            chatSection.appendChild(chatTitle);
+            chatField = mkField("Chat Messages", cm.state.chats[currentCid] || 0);
+            chatSection.appendChild(chatField.row);
+            const chatIdHint = document.createElement("div");
+            chatIdHint.style.cssText = "font-size: 9px; color: var(--text-sub); opacity: 0.5; margin-top: 2px;";
+            chatIdHint.textContent = "ID: " + currentCid.slice(0, 12) + "...";
+            chatSection.appendChild(chatIdHint);
+            body.appendChild(chatSection);
+          }
+          const applyBtn = document.createElement("button");
+          applyBtn.className = "settings-btn";
+          applyBtn.textContent = "Apply Calibration";
+          applyBtn.style.marginTop = "12px";
+          applyBtn.style.background = "rgba(138, 180, 248, 0.2)";
+          applyBtn.style.color = "var(--accent, #8ab4f8)";
+          applyBtn.style.fontWeight = "500";
+          applyBtn.onclick = () => {
+            const newToday = parseInt(todayField.input.value, 10) || 0;
+            const newTotal = parseInt(totalField.input.value, 10) || 0;
+            const newChats = parseInt(chatsField.input.value, 10) || 0;
+            cm.ensureTodayEntry();
+            cm.state.dailyCounts[todayKey].messages = newToday;
+            cm.state.total = newTotal;
+            cm.state.totalChatsCreated = newChats;
+            if (chatField && currentCid) {
+              const newChatVal = parseInt(chatField.input.value, 10) || 0;
+              cm.state.chats[currentCid] = newChatVal;
+            }
+            cm.saveData();
+            PanelUI.update();
+            if (cm.state.isExpanded) PanelUI.renderDetailsPane();
+            Logger.info("Data calibrated", {
+              today: newToday,
+              total: newTotal,
+              chats: newChats,
+              chatId: currentCid || null
+            });
+            closeOverlay();
+          };
+          body.appendChild(applyBtn);
+          const note = document.createElement("div");
+          note.className = "settings-version";
+          note.textContent = "Manually adjust counter values";
+          body.appendChild(note);
+          modal.appendChild(header);
+          modal.appendChild(body);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+        },
+        // --- Dashboard Modal ---
+        openDashboard() {
+          const exist = document.getElementById("gemini-dashboard-overlay");
+          if (exist) return;
+          const cm = CounterModule;
+          const overlay = document.createElement("div");
+          overlay.id = "gemini-dashboard-overlay";
+          overlay.className = "dash-overlay";
+          const closeDash = () => {
+            document.removeEventListener("keydown", escHandler);
+            const tip = document.getElementById("g-heatmap-tooltip");
+            if (tip) tip.remove();
+            overlay.remove();
+          };
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeDash();
+          };
+          document.addEventListener("keydown", escHandler);
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeDash();
+          };
+          const modal = document.createElement("div");
+          modal.className = "dash-modal";
+          Core.applyTheme(modal, getCurrentTheme());
+          const header = document.createElement("div");
+          header.className = "dash-header";
+          const titleDiv = document.createElement("div");
+          titleDiv.className = "dash-title";
+          titleDiv.textContent = "";
+          titleDiv.appendChild(createIcon("chart", 20));
+          titleDiv.appendChild(document.createTextNode(" Analytics "));
+          const userSpan = document.createElement("span");
+          userSpan.style.fontSize = "12px";
+          userSpan.style.opacity = "0.5";
+          userSpan.style.marginTop = "8px";
+          userSpan.textContent = Core.getCurrentUser().split("@")[0];
+          titleDiv.appendChild(userSpan);
+          const close = document.createElement("div");
+          close.className = "dash-close";
+          close.appendChild(createIcon("x", 22));
+          close.onclick = () => closeDash();
+          header.appendChild(titleDiv);
+          header.appendChild(close);
+          modal.appendChild(header);
+          const content = document.createElement("div");
+          content.className = "dash-content";
+          const streaks = cm.calculateStreaks();
+          const grid = document.createElement("div");
+          grid.className = "metric-grid";
+          const metrics = [
+            { label: "Total Messages", val: cm.state.total.toLocaleString() },
+            { label: "Chats Created", val: cm.state.totalChatsCreated.toLocaleString() },
+            { label: "Current Streak", val: streaks.current + " Days" },
+            { label: "Best Streak", val: streaks.best + " Days" }
+          ];
+          metrics.forEach((m) => {
+            const card = document.createElement("div");
+            card.className = "metric-card";
+            const valDiv = document.createElement("div");
+            valDiv.className = "metric-val";
+            valDiv.textContent = m.val;
+            const labelDiv = document.createElement("div");
+            labelDiv.className = "metric-label";
+            labelDiv.textContent = m.label;
+            card.appendChild(valDiv);
+            card.appendChild(labelDiv);
+            grid.appendChild(card);
+          });
+          content.appendChild(grid);
+          const hmContainer = document.createElement("div");
+          hmContainer.className = "heatmap-container";
+          const hmHeader = document.createElement("div");
+          hmHeader.className = "heatmap-title";
+          const titleSpan = document.createElement("span");
+          titleSpan.textContent = "Activity (Last 365 Days)";
+          const legend = document.createElement("div");
+          legend.className = "heatmap-legend";
+          legend.appendChild(document.createTextNode("Less "));
+          ["l-0", "l-1", "l-3", "l-4"].forEach((cls) => {
+            const item = document.createElement("div");
+            item.className = `legend-item ${cls}`;
+            legend.appendChild(item);
+          });
+          legend.appendChild(document.createTextNode(" More"));
+          hmHeader.appendChild(titleSpan);
+          hmHeader.appendChild(legend);
+          hmContainer.appendChild(hmHeader);
+          const hmWrapper = document.createElement("div");
+          hmWrapper.className = "heatmap-wrapper";
+          const weekCol = document.createElement("div");
+          weekCol.className = "heatmap-week-labels";
+          ["", "Mon", "", "Wed", "", "Fri", ""].forEach((d) => {
+            const label = document.createElement("div");
+            label.className = "week-label";
+            label.textContent = d;
+            weekCol.appendChild(label);
+          });
+          hmWrapper.appendChild(weekCol);
+          const hmMain = document.createElement("div");
+          hmMain.className = "heatmap-main";
+          const monthRow = document.createElement("div");
+          monthRow.className = "heatmap-months";
+          const hmGrid = document.createElement("div");
+          hmGrid.className = "heatmap-grid";
+          const today = /* @__PURE__ */ new Date();
+          const oneYearAgo = /* @__PURE__ */ new Date();
+          oneYearAgo.setDate(today.getDate() - 365);
+          let maxVal = 0;
+          Object.values(cm.state.dailyCounts).forEach((v) => {
+            if (v.messages > maxVal) maxVal = v.messages;
+          });
+          if (maxVal < 10) maxVal = 10;
+          let tooltip = document.getElementById("g-heatmap-tooltip");
+          if (!tooltip) {
+            tooltip = document.createElement("div");
+            tooltip.id = "g-heatmap-tooltip";
+            tooltip.className = "g-tooltip";
+            document.body.appendChild(tooltip);
+          }
+          let iterDate = new Date(oneYearAgo);
+          iterDate.setDate(iterDate.getDate() - iterDate.getDay());
+          let lastMonth = -1;
+          for (let week = 0; week < 53; week++) {
+            const currentMonth = iterDate.getMonth();
+            const mLabel = document.createElement("div");
+            mLabel.className = "month-label";
+            if (currentMonth !== lastMonth) {
+              const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+              mLabel.textContent = monthNames[currentMonth];
+              lastMonth = currentMonth;
+            }
+            monthRow.appendChild(mLabel);
+            const col = document.createElement("div");
+            col.className = "heatmap-col";
+            for (let day = 0; day < 7; day++) {
+              const key = `${iterDate.getFullYear()}-${String(iterDate.getMonth() + 1).padStart(2, "0")}-${String(iterDate.getDate()).padStart(2, "0")}`;
+              const count = cm.state.dailyCounts[key]?.messages || 0;
+              const cell = document.createElement("div");
+              cell.className = "heatmap-cell";
+              let level = "l-0";
+              if (count > 0) {
+                const ratio = count / maxVal;
+                if (ratio > 0.75) level = "l-4";
+                else if (ratio > 0.5) level = "l-3";
+                else if (ratio > 0.25) level = "l-2";
+                else level = "l-1";
+              }
+              cell.classList.add(level);
+              cell.onmouseenter = (e) => {
+                tooltip.textContent = "";
+                const b = document.createElement("div");
+                b.style.fontWeight = "bold";
+                b.textContent = key;
+                const sp = document.createElement("div");
+                sp.textContent = `${count} messages`;
+                tooltip.appendChild(b);
+                tooltip.appendChild(sp);
+                tooltip.classList.add("visible");
+                const rect = cell.getBoundingClientRect();
+                let left = rect.left + rect.width / 2;
+                let top = rect.top;
+                tooltip.style.left = left + "px";
+                tooltip.style.top = top + "px";
+                const ttRect = tooltip.getBoundingClientRect();
+                if (ttRect.right > window.innerWidth) tooltip.style.left = window.innerWidth - ttRect.width / 2 - 10 + "px";
+                if (ttRect.left < 0) tooltip.style.left = ttRect.width / 2 + 10 + "px";
+                if (ttRect.top < 0) tooltip.style.top = rect.bottom + 10 + "px";
+                if (ttRect.bottom > window.innerHeight) tooltip.style.top = rect.top - ttRect.height - 10 + "px";
+              };
+              cell.onmouseleave = () => tooltip.classList.remove("visible");
+              col.appendChild(cell);
+              iterDate.setDate(iterDate.getDate() + 1);
+              if (iterDate > today && day === today.getDay()) break;
+            }
+            hmGrid.appendChild(col);
+            if (iterDate > today) break;
+          }
+          hmMain.appendChild(monthRow);
+          hmMain.appendChild(hmGrid);
+          hmWrapper.appendChild(hmMain);
+          hmContainer.appendChild(hmWrapper);
+          content.appendChild(hmContainer);
+          const allByModel = { flash: 0, thinking: 0, pro: 0 };
+          Object.values(cm.state.dailyCounts).forEach((entry) => {
+            if (entry.byModel) {
+              allByModel.flash += entry.byModel.flash || 0;
+              allByModel.thinking += entry.byModel.thinking || 0;
+              allByModel.pro += entry.byModel.pro || 0;
+            }
+          });
+          const modelTotal = allByModel.flash + allByModel.thinking + allByModel.pro;
+          if (modelTotal > 0) {
+            const modelContainer = document.createElement("div");
+            modelContainer.className = "heatmap-container";
+            const modelTitle = document.createElement("div");
+            modelTitle.className = "heatmap-title";
+            const modelTitleSpan = document.createElement("span");
+            modelTitleSpan.textContent = "Model Usage Distribution";
+            modelTitle.appendChild(modelTitleSpan);
+            modelContainer.appendChild(modelTitle);
+            const modelColors = { flash: CounterModule.MODEL_CONFIG.flash.color, thinking: CounterModule.MODEL_CONFIG.thinking.color, pro: CounterModule.MODEL_CONFIG.pro.color };
+            const models = [
+              { key: "flash", label: "3 Flash", count: allByModel.flash },
+              { key: "thinking", label: "3 Flash Thinking", count: allByModel.thinking },
+              { key: "pro", label: "3 Pro", count: allByModel.pro }
+            ];
+            models.forEach((m) => {
+              const pct = (m.count / modelTotal * 100).toFixed(1);
+              const barRow = document.createElement("div");
+              barRow.style.cssText = "display: flex; align-items: center; gap: 8px; margin-bottom: 8px;";
+              const labelEl = document.createElement("div");
+              labelEl.style.cssText = "font-size: 11px; color: var(--text-sub); width: 110px; flex-shrink: 0;";
+              labelEl.textContent = m.label;
+              const barBg = document.createElement("div");
+              barBg.style.cssText = "flex: 1; height: 16px; background: var(--btn-bg, rgba(255,255,255,0.05)); border-radius: 4px; overflow: hidden;";
+              const barFill = document.createElement("div");
+              barFill.style.cssText = `height: 100%; width: ${pct}%; background: ${modelColors[m.key]}; border-radius: 4px; transition: width 0.4s;`;
+              barBg.appendChild(barFill);
+              const valEl = document.createElement("div");
+              valEl.style.cssText = "font-size: 11px; color: var(--text-main); width: 70px; text-align: right; flex-shrink: 0; font-family: monospace;";
+              valEl.textContent = `${m.count} (${pct}%)`;
+              barRow.appendChild(labelEl);
+              barRow.appendChild(barBg);
+              barRow.appendChild(valEl);
+              modelContainer.appendChild(barRow);
+            });
+            const weightedTotal = Object.keys(allByModel).reduce((sum, k) => sum + (allByModel[k] || 0) * (CounterModule.MODEL_CONFIG[k]?.multiplier ?? 1), 0);
+            const wStr = weightedTotal % 1 === 0 ? String(weightedTotal) : weightedTotal.toFixed(1);
+            const weightedRow = document.createElement("div");
+            weightedRow.style.cssText = "font-size: 11px; color: var(--text-sub); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--divider, rgba(255,255,255,0.05));";
+            weightedRow.textContent = `Total Weighted: ${wStr} | Raw Messages: ${modelTotal}`;
+            modelContainer.appendChild(weightedRow);
+            content.appendChild(modelContainer);
+          }
+          modal.appendChild(content);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          setTimeout(() => {
+            hmContainer.scrollLeft = hmContainer.scrollWidth;
+          }, 0);
+        }
+      };
+    }
+  });
+
+  // src/module_registry.js
+  var ModuleRegistry;
+  var init_module_registry = __esm({
+    "src/module_registry.js"() {
+      init_constants();
+      init_logger();
+      init_native_ui();
+      init_panel_ui();
+      ModuleRegistry = {
+        modules: {},
+        enabledModules: /* @__PURE__ */ new Set(),
+        register(module) {
+          this.modules[module.id] = module;
+          Logger.debug("Module registered", { id: module.id });
+        },
+        init() {
+          let saved;
+          try {
+            saved = GM_getValue(GLOBAL_KEYS.MODULES, null);
+          } catch (e) {
+            saved = null;
+          }
+          if (saved) {
+            this.enabledModules = new Set(saved);
+          } else {
+            Object.values(this.modules).forEach((m) => {
+              if (m.defaultEnabled) this.enabledModules.add(m.id);
+            });
+            this.save();
+          }
+          this.enabledModules.forEach((id) => {
+            if (this.modules[id]?.init) {
+              try {
+                this.modules[id].init();
+              } catch (e) {
+                Logger.error("Module init failed", { id, error: String(e) });
+              }
+            }
+          });
+        },
+        isEnabled(id) {
+          return this.enabledModules.has(id);
+        },
+        toggle(id) {
+          if (this.enabledModules.has(id)) {
+            this.enabledModules.delete(id);
+            if (this.modules[id]?.destroy) {
+              try {
+                this.modules[id].destroy();
+              } catch (e) {
+                Logger.error("Module destroy failed", { id, error: String(e) });
+              }
+            }
+          } else {
+            this.enabledModules.add(id);
+            if (this.modules[id]?.init) {
+              try {
+                this.modules[id].init();
+              } catch (e) {
+                Logger.error("Module init failed (toggle)", { id, error: String(e) });
+              }
+            }
+            if (typeof this.modules[id]?.injectNativeUI === "function") {
+              try {
+                this.modules[id].injectNativeUI();
+              } catch (e) {
+                NativeUI.markDirty(id);
+              }
+            }
+            let seen;
+            try {
+              seen = GM_getValue(GLOBAL_KEYS.ONBOARDING, {});
+            } catch (e) {
+              seen = {};
+            }
+            if (!seen[id] && typeof this.modules[id]?.getOnboarding === "function") {
+              PanelUI.showOnboarding(id);
+              seen[id] = true;
+              try {
+                GM_setValue(GLOBAL_KEYS.ONBOARDING, seen);
+              } catch (e) {
+              }
+            }
+          }
+          this.save();
+          Logger.info("Module toggled", { id, enabled: this.enabledModules.has(id) });
+        },
+        save() {
+          try {
+            GM_setValue(GLOBAL_KEYS.MODULES, Array.from(this.enabledModules));
+          } catch (e) {
+          }
+        },
+        notifyUserChange(user) {
+          this.enabledModules.forEach((id) => {
+            if (this.modules[id]?.onUserChange) {
+              try {
+                this.modules[id].onUserChange(user);
+              } catch (e) {
+                Logger.error("Module onUserChange failed", { id, error: String(e) });
+              }
+            }
+          });
+        },
+        getAll() {
+          return Object.values(this.modules);
+        }
+      };
+    }
+  });
+
+  // src/dom_watcher.js
+  var DOMWatcher;
+  var init_dom_watcher = __esm({
+    "src/dom_watcher.js"() {
+      init_logger();
+      DOMWatcher = {
+        _observer: null,
+        _handlers: [],
+        _timers: {},
+        init() {
+          if (this._observer) return;
+          this._observer = new MutationObserver((mutations) => {
+            for (const h of this._handlers) {
+              try {
+                if (mutations.some((m) => h.match(m))) {
+                  clearTimeout(this._timers[h.id]);
+                  this._timers[h.id] = setTimeout(h.callback, h.debounce || 0);
+                }
+              } catch (e) {
+              }
+            }
+          });
+          this._observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["aria-label", "alt", "class", "data-test-id"]
+          });
+          Logger.debug("DOMWatcher initialized");
+        },
+        register(id, { match, callback, debounce = 0 }) {
+          this.unregister(id);
+          this._handlers.push({ id, match, callback, debounce });
+          Logger.debug("DOMWatcher handler registered", { id, debounce });
+        },
+        unregister(id) {
+          this._handlers = this._handlers.filter((h) => h.id !== id);
+          clearTimeout(this._timers[id]);
+          delete this._timers[id];
+        },
+        destroy() {
+          this._observer?.disconnect();
+          this._observer = null;
+          Object.values(this._timers).forEach(clearTimeout);
+          this._handlers = [];
+          this._timers = {};
+        }
+      };
+    }
+  });
+
+  // src/modules/folders.js
+  function isValidChatHref(href) {
+    if (!href || typeof href !== "string") return false;
+    const lower = href.toLowerCase().trim();
+    return !lower.match(/^(javascript|data|vbscript):/);
+  }
+  var FoldersModule;
+  var init_folders = __esm({
+    "src/modules/folders.js"() {
+      init_constants();
+      init_logger();
+      init_core();
+      init_native_ui();
+      init_dom_watcher();
+      init_panel_ui();
+      init_counter();
+      init_icons();
+      FoldersModule = {
+        id: "folders",
+        name: NativeUI.t("对话文件夹", "Chat Folders"),
+        description: NativeUI.t("整理对话到自定义文件夹", "Organize chats into custom folders"),
+        iconId: "folder",
+        defaultEnabled: false,
+        // --- \u6A21\u5757\u79C1\u6709\u5E38\u91CF ---
+        STORAGE_KEY: "gemini_folders_data",
+        FOLDER_COLORS: ["#8ab4f8", "#81c995", "#f28b82", "#fdd663", "#d7aefb", "#78d9ec", "#fcad70", "#c58af9"],
+        // --- \u6A21\u5757\u79C1\u6709\u72B6\u6001 ---
+        data: {
+          folders: {},
+          // { folderId: { name, color, collapsed } }
+          chatToFolder: {},
+          // { chatId: folderId }
+          folderOrder: []
+          // [folderId, folderId, ...]
+        },
+        observer: null,
+        chatCache: [],
+        // \u7F13\u5B58\u626B\u63CF\u5230\u7684\u804A\u5929\u9879
+        dragState: null,
+        // Chat drag state: { chatId, chatTitle }
+        folderDragState: null,
+        // Folder reorder state: { folderId }
+        uncategorizedCollapsed: false,
+        _searchQuery: "",
+        _batchMode: false,
+        _batchSelected: /* @__PURE__ */ new Set(),
+        _activeFilter: null,
+        _initTimeout: null,
+        // --- \u751F\u547D\u5468\u671F ---
+        init() {
+          this.loadData();
+          this.injectStyles();
+          this.startObserver();
+          Logger.info("FoldersModule initialized", { mode: "pure" });
+        },
+        destroy() {
+          if (this._styleEl) {
+            this._styleEl.remove();
+            this._styleEl = null;
+          }
+          if (this._initTimeout) {
+            clearTimeout(this._initTimeout);
+            this._initTimeout = null;
+          }
+          DOMWatcher.unregister("folders-sidebar");
+          this.dragState = null;
+          this.folderDragState = null;
+          document.querySelectorAll(".gf-sidebar-dot").forEach((el) => el.remove());
+          document.querySelectorAll(".gf-modal-overlay").forEach((el) => el.remove());
+          if (this.chatCache) {
+            this.chatCache.forEach((chat) => {
+              if (chat.element) {
+                chat.element.removeAttribute("draggable");
+                chat.element.ondragstart = null;
+                chat.element.ondragend = null;
+                chat.element.style.opacity = "";
+              }
+            });
+          }
+          document.querySelectorAll(".gf-drop-highlight").forEach((el) => {
+            el.classList.remove("gf-drop-highlight");
+          });
+          this.removeNativeUI();
+          Logger.info("FoldersModule destroyed");
+        },
+        onUserChange(user) {
+          this.loadData();
+          this.markSidebarChats();
+          this._activeFilter = null;
+          this.removeNativeUI();
+          if (CounterModule.state.isExpanded) {
+            PanelUI.renderDetailsPane();
+          }
+        },
+        // --- \u539F\u751F UI \u6CE8\u5165 ---
+        injectNativeUI() {
+          const FILTER_ID = "gc-folder-filter";
+          if (document.getElementById(FILTER_ID)) return;
+          const sidebar = NativeUI.getSidebar();
+          if (!sidebar) return;
+          const filterBar = document.createElement("div");
+          filterBar.id = FILTER_ID;
+          filterBar.style.cssText = "display:flex;gap:4px;padding:6px 12px;overflow-x:auto;border-bottom:1px solid rgba(255,255,255,0.08);align-items:center;flex-shrink:0;scrollbar-width:none;height:auto;max-height:36px;align-self:start;";
+          this._renderFilterTabs(filterBar);
+          if (!sidebar) return;
+          const overflowC = sidebar.querySelector(".overflow-container") || sidebar;
+          overflowC.prepend(filterBar);
+        },
+        removeNativeUI() {
+          NativeUI.remove("gc-folder-filter");
+          const chats = Core.scanSidebarChats();
+          chats.forEach((chat) => {
+            if (chat.element) chat.element.style.display = "";
+          });
+          this._activeFilter = null;
+        },
+        _renderFilterTabs(container) {
+          container.replaceChildren();
+          const folders = this.data.folderOrder.map((id) => ({ id, ...this.data.folders[id] })).filter((f) => f.name);
+          const allTab = this._createFilterTab("全部", null, "#8ab4f8");
+          container.appendChild(allTab);
+          folders.forEach((folder) => {
+            const tab = this._createFilterTab(folder.name, folder.id, folder.color);
+            container.appendChild(tab);
+          });
+        },
+        _createFilterTab(label, folderId, color) {
+          const tab = document.createElement("button");
+          tab.className = "gc-native-btn";
+          const isActive = this._activeFilter === folderId;
+          tab.style.cssText = `padding:3px 10px;border-radius:14px;font-size:12px;white-space:nowrap;cursor:pointer;border:1px solid ${color || "#8ab4f8"}40;background:${isActive ? (color || "#8ab4f8") + "30" : "transparent"};color:${isActive ? color || "#8ab4f8" : "#aaa"};font-weight:${isActive ? "600" : "400"};transition:all 0.15s;`;
+          tab.textContent = label;
+          tab.onclick = (e) => {
+            e.stopPropagation();
+            this._activeFilter = folderId;
+            this._applyFilter(folderId);
+            const bar = document.getElementById("gc-folder-filter");
+            if (bar) this._renderFilterTabs(bar);
+          };
+          return tab;
+        },
+        _applyFilter(folderId) {
+          const chats = Core.scanSidebarChats();
+          chats.forEach((chat) => {
+            if (!folderId) {
+              chat.element.style.display = "";
+            } else {
+              const assignment = this.data.chatToFolder[chat.id];
+              chat.element.style.display = assignment === folderId ? "" : "none";
+            }
+          });
+        },
+        _refreshFilterBar() {
+          const bar = document.getElementById("gc-folder-filter");
+          if (bar) this._renderFilterTabs(bar);
+        },
+        // --- \u6570\u636E\u7BA1\u7406 ---
+        loadData() {
+          const user = Core.getCurrentUser();
+          const key = user && user !== TEMP_USER ? `${this.STORAGE_KEY}_${user}` : this.STORAGE_KEY;
+          let saved;
+          try {
+            saved = GM_getValue(key, null);
+          } catch (e) {
+            saved = null;
+          }
+          if (saved) {
+            this.data = {
+              folders: saved.folders || {},
+              chatToFolder: saved.chatToFolder || {},
+              folderOrder: saved.folderOrder || Object.keys(saved.folders || {})
+            };
+          } else {
+            this.data = { folders: {}, chatToFolder: {}, folderOrder: [] };
+          }
+        },
+        saveData() {
+          const user = Core.getCurrentUser();
+          const key = user && user !== TEMP_USER ? `${this.STORAGE_KEY}_${user}` : this.STORAGE_KEY;
+          try {
+            GM_setValue(key, this.data);
+          } catch (e) {
+          }
+        },
+        // --- \u6587\u4EF6\u5939 CRUD ---
+        createFolder(name, color) {
+          const id = "folder_" + Date.now();
+          this.data.folders[id] = {
+            name: name || "New Folder",
+            color: color || this.FOLDER_COLORS[Object.keys(this.data.folders).length % this.FOLDER_COLORS.length],
+            collapsed: false,
+            rules: []
+            // Auto-classification rules: [{ type: 'keyword', value: 'string' }]
+          };
+          this.data.folderOrder.push(id);
+          this.saveData();
+          this.markSidebarChats();
+          this._refreshFilterBar();
+          PanelUI.renderDetailsPane();
+          return id;
+        },
+        renameFolder(folderId, newName) {
+          if (this.data.folders[folderId]) {
+            this.data.folders[folderId].name = newName;
+            this.saveData();
+            this._refreshFilterBar();
+            PanelUI.renderDetailsPane();
+          }
+        },
+        deleteFolder(folderId) {
+          if (!this.data.folders[folderId]) return;
+          Object.keys(this.data.chatToFolder).forEach((chatId) => {
+            if (this.data.chatToFolder[chatId] === folderId) {
+              delete this.data.chatToFolder[chatId];
+            }
+          });
+          delete this.data.folders[folderId];
+          this.data.folderOrder = this.data.folderOrder.filter((id) => id !== folderId);
+          this.saveData();
+          this.markSidebarChats();
+          this._refreshFilterBar();
+          PanelUI.renderDetailsPane();
+        },
+        toggleFolderCollapse(folderId) {
+          if (this.data.folders[folderId]) {
+            this.data.folders[folderId].collapsed = !this.data.folders[folderId].collapsed;
+            this.saveData();
+            PanelUI.renderDetailsPane();
+          }
+        },
+        setFolderColor(folderId, color) {
+          if (this.data.folders[folderId]) {
+            this.data.folders[folderId].color = color;
+            this.saveData();
+            this.markSidebarChats();
+            this._refreshFilterBar();
+            PanelUI.renderDetailsPane();
+          }
+        },
+        toggleFolderPin(folderId) {
+          if (this.data.folders[folderId]) {
+            this.data.folders[folderId].pinned = !this.data.folders[folderId].pinned;
+            this.saveData();
+            PanelUI.renderDetailsPane();
+          }
+        },
+        moveChatToFolder(chatId, folderId) {
+          if (folderId === null) {
+            delete this.data.chatToFolder[chatId];
+          } else {
+            this.data.chatToFolder[chatId] = folderId;
+          }
+          this.saveData();
+          this.markSidebarChats();
+          PanelUI.renderDetailsPane();
+        },
+        reorderFolder(draggedId, targetId, position) {
+          const order = this.data.folderOrder.filter((id) => id !== draggedId);
+          const targetIdx = order.indexOf(targetId);
+          if (targetIdx === -1) return;
+          const insertIdx = position === "before" ? targetIdx : targetIdx + 1;
+          order.splice(insertIdx, 0, draggedId);
+          this.data.folderOrder = order;
+          this.saveData();
+          PanelUI.renderDetailsPane();
+        },
+        batchMoveToFolder(targetFolderId) {
+          this._batchSelected.forEach((chatId) => {
+            if (targetFolderId === null) {
+              delete this.data.chatToFolder[chatId];
+            } else {
+              this.data.chatToFolder[chatId] = targetFolderId;
+            }
+          });
+          this._batchSelected.clear();
+          this._batchMode = false;
+          this.saveData();
+          this.markSidebarChats();
+          PanelUI.renderDetailsPane();
+        },
+        getFolderStats(folderId) {
+          const chatIds = Object.entries(this.data.chatToFolder).filter(([, fid]) => fid === folderId).map(([cid]) => cid);
+          return { chatCount: chatIds.length };
+        },
+        setFolderRules(folderId, rules) {
+          if (this.data.folders[folderId]) {
+            this.data.folders[folderId].rules = rules;
+            this.saveData();
+          }
+        },
+        autoClassify() {
+          let classified = 0;
+          this.scanSidebarChats();
+          this.chatCache.forEach((chat) => {
+            if (this.data.chatToFolder[chat.id]) return;
+            const title = chat.title.toLowerCase();
+            for (const folderId of this.data.folderOrder) {
+              const folder = this.data.folders[folderId];
+              if (!folder || !folder.rules || folder.rules.length === 0) continue;
+              const matched = folder.rules.some((rule) => {
+                if (rule.type === "keyword" && rule.value) {
+                  return title.includes(rule.value.toLowerCase());
+                }
+                if (rule.type === "regex" && rule.value) {
+                  try {
+                    if (/([+*?]|\{\d+,?\d*\})\s*\)\s*[+*?{]/.test(rule.value)) return false;
+                    const regex = new RegExp(rule.value, "i");
+                    return regex.test(chat.title.substring(0, 500));
+                  } catch {
+                    return false;
+                  }
+                }
+                return false;
+              });
+              if (matched) {
+                this.data.chatToFolder[chat.id] = folderId;
+                classified++;
+                break;
+              }
+            }
+          });
+          if (classified > 0) {
+            this.saveData();
+            this.markSidebarChats();
+            PanelUI.renderDetailsPane();
+            Logger.info(`Auto-classified ${classified} chats`);
+          }
+          return classified;
+        },
+        // --- \u4FA7\u8FB9\u680F\u626B\u63CF ---
+        scanSidebarChats() {
+          this.chatCache = Core.scanSidebarChats();
+          return this.chatCache;
+        },
+        // --- \u4EC5\u5728\u4FA7\u8FB9\u680F\u804A\u5929\u9879\u4E0A\u6DFB\u52A0\u989C\u8272\u6807\u8BB0 (6px dot) ---
+        markSidebarChats() {
+          document.querySelectorAll(".gf-sidebar-dot").forEach((el) => el.remove());
+          const chats = this.scanSidebarChats();
+          chats.forEach((chat) => {
+            const folderId = this.data.chatToFolder[chat.id];
+            if (folderId && this.data.folders[folderId]) {
+              const folder = this.data.folders[folderId];
+              const dot = document.createElement("span");
+              dot.className = "gf-sidebar-dot";
+              dot.style.cssText = `
+                    display: inline-block;
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background: ${folder.color};
+                    margin-right: 6px;
+                    flex-shrink: 0;
+                    vertical-align: middle;
+                `;
+              dot.title = folder.name;
+              chat.element.insertBefore(dot, chat.element.firstChild);
+            }
+          });
+          this.enableSidebarDrag();
+        },
+        // --- \u5728\u4FA7\u8FB9\u680F\u542F\u7528\u62D6\u62FD\uFF08\u62D6\u5230\u6211\u4EEC\u7684\u9762\u677F\uFF09 ---
+        enableSidebarDrag() {
+          const chats = this.chatCache;
+          chats.forEach((chat) => {
+            chat.element.setAttribute("draggable", "true");
+            chat.element.ondragstart = (e) => {
+              this.dragState = { chatId: chat.id, chatTitle: chat.title };
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", chat.id);
+              chat.element.style.opacity = "0.5";
+            };
+            chat.element.ondragend = () => {
+              chat.element.style.opacity = "";
+              this.dragState = null;
+              document.querySelectorAll(".gf-drop-highlight").forEach((el) => {
+                el.classList.remove("gf-drop-highlight");
+              });
+            };
+          });
+        },
+        // --- DOM 观察 ---
+        startObserver() {
+          if (this._initTimeout) clearTimeout(this._initTimeout);
+          this._initTimeout = setTimeout(() => this.markSidebarChats(), TIMINGS.POLL_INTERVAL);
+          DOMWatcher.register("folders-sidebar", {
+            match: (m) => {
+              const target = m.target;
+              if (!target || !target.closest) return false;
+              return !!target.closest('bard-sidenav-container, nav, [role="navigation"]');
+            },
+            callback: () => this.markSidebarChats(),
+            debounce: TIMINGS.OBSERVER_DEBOUNCE
+          });
+        },
+        _styleEl: null,
+        // --- \u6CE8\u5165\u6837\u5F0F ---
+        injectStyles() {
+          if (this._styleEl) return;
+          this._styleEl = GM_addStyle(`
+            /* Folder Modal */
+            .gf-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: var(--overlay-tint, rgba(0, 0, 0, 0.6));
+                z-index: 2147483646;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .gf-modal {
+                width: 280px;
+                background: var(--bg, #202124);
+                border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            }
+            .gf-modal-title {
+                font-size: 16px;
+                font-weight: 500;
+                color: var(--text-main, #e8eaed);
+                margin-bottom: 16px;
+            }
+            .gf-modal-input {
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+                border-radius: 8px;
+                background: var(--input-bg, rgba(255, 255, 255, 0.05));
+                color: var(--text-main, #e8eaed);
+                font-size: 14px;
+                margin-bottom: 12px;
+                box-sizing: border-box;
+            }
+            .gf-modal-input:focus {
+                outline: none;
+                border-color: var(--accent, #8ab4f8);
+            }
+            .gf-modal-colors {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+            }
+            .gf-color-option {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                cursor: pointer;
+                border: 2px solid transparent;
+                transition: transform 0.2s, border-color 0.2s;
+            }
+            .gf-color-option:hover {
+                transform: scale(1.1);
+            }
+            .gf-color-option.selected {
+                border-color: #fff;
+            }
+            .gf-modal-actions {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+            .gf-modal-btn {
+                padding: 8px 16px;
+                border: none;
+                border-radius: 8px;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .gf-modal-btn.primary {
+                background: var(--accent, #8ab4f8);
+                color: #000;
+            }
+            .gf-modal-btn.secondary {
+                background: var(--btn-bg, rgba(255, 255, 255, 0.1));
+                color: var(--text-main, #e8eaed);
+            }
+            .gf-modal-btn.danger {
+                background: rgba(242, 139, 130, 0.2);
+                color: #f28b82;
+            }
+            .gf-modal-btn:hover {
+                filter: brightness(1.1);
+            }
+
+            /* Folder row in details pane */
+            .gf-folder-row {
+                display: flex;
+                align-items: center;
+                padding: 6px 8px;
+                margin: 2px 0;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: background 0.2s;
+            }
+            .gf-folder-row:hover {
+                background: var(--row-hover, rgba(255, 255, 255, 0.08));
+            }
+            .gf-folder-row.drop-active {
+                background: rgba(138, 180, 248, 0.2) !important;
+                outline: 2px dashed rgba(138, 180, 248, 0.5);
+            }
+            .gf-folder-dot {
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                margin-right: 8px;
+                flex-shrink: 0;
+            }
+            .gf-folder-label {
+                flex: 1;
+                font-size: 11px;
+                color: var(--text-main, #e8eaed);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .gf-folder-badge {
+                font-size: 9px;
+                color: var(--text-sub, #9aa0a6);
+                margin-left: 4px;
+            }
+            .gf-folder-toggle {
+                font-size: 8px;
+                color: var(--text-sub, #9aa0a6);
+                margin-left: 4px;
+                transition: transform 0.2s;
+            }
+            .gf-folder-row.collapsed .gf-folder-toggle {
+                transform: rotate(-90deg);
+            }
+            .gf-folder-actions {
+                display: none;
+                gap: 2px;
+                margin-left: 4px;
+            }
+            .gf-folder-row:hover .gf-folder-actions {
+                display: flex;
+            }
+            .gf-folder-action {
+                font-size: 10px;
+                padding: 2px;
+                cursor: pointer;
+                opacity: 0.6;
+            }
+            .gf-folder-action:hover {
+                opacity: 1;
+            }
+
+            /* Chat item in folder */
+            .gf-chat-row {
+                display: flex;
+                align-items: center;
+                padding: 4px 8px 4px 20px;
+                margin: 1px 0;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: background 0.2s;
+                font-size: 10px;
+                color: var(--text-sub, #9aa0a6);
+            }
+            .gf-chat-row:hover {
+                background: var(--row-hover, rgba(255, 255, 255, 0.08));
+                color: var(--text-main, #e8eaed);
+            }
+            .gf-chat-title {
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .gf-chat-remove {
+                font-size: 9px;
+                opacity: 0;
+                cursor: pointer;
+                padding: 2px;
+            }
+            .gf-chat-row:hover .gf-chat-remove {
+                opacity: 0.6;
+            }
+            .gf-chat-remove:hover {
+                opacity: 1;
+            }
+
+            /* Add folder button in details */
+            .gf-add-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                padding: 6px;
+                margin-top: 4px;
+                border: 1px dashed var(--divider, rgba(255, 255, 255, 0.15));
+                border-radius: 6px;
+                background: transparent;
+                color: var(--text-sub, #9aa0a6);
+                font-size: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+                width: 100%;
+            }
+            .gf-add-btn:hover {
+                background: var(--input-bg, rgba(255, 255, 255, 0.05));
+                border-color: var(--border, rgba(255, 255, 255, 0.25));
+                color: var(--text-main, #e8eaed);
+            }
+
+            /* Drop highlight for folder rows */
+            .gf-drop-highlight {
+                background: rgba(138, 180, 248, 0.15) !important;
+            }
+
+            /* Folder drag reorder */
+            .gf-folder-row[draggable="true"] {
+                cursor: grab;
+            }
+            .gf-folder-row.dragging {
+                opacity: 0.4;
+            }
+            .gf-folder-row.drag-above {
+                border-top: 2px solid var(--accent, #8ab4f8);
+            }
+            .gf-folder-row.drag-below {
+                border-bottom: 2px solid var(--accent, #8ab4f8);
+            }
+
+            /* Uncategorized section */
+            .gf-uncategorized-header {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 8px;
+                margin-top: 6px;
+                font-size: 10px;
+                color: var(--text-sub, #9aa0a6);
+                opacity: 0.7;
+                cursor: pointer;
+                border-radius: 6px;
+                transition: background 0.2s;
+            }
+            .gf-uncategorized-header:hover {
+                background: var(--row-hover, rgba(255, 255, 255, 0.08));
+                opacity: 1;
+            }
+
+            /* Batch mode */
+            .gf-batch-bar {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                margin-bottom: 4px;
+                font-size: 10px;
+                color: var(--text-sub, #9aa0a6);
+            }
+            .gf-batch-bar button {
+                font-size: 9px;
+                padding: 2px 6px;
+                border-radius: 4px;
+                border: 1px solid var(--divider, rgba(255,255,255,0.1));
+                background: var(--btn-bg, rgba(255,255,255,0.05));
+                color: var(--text-sub, #9aa0a6);
+                cursor: pointer;
+            }
+            .gf-batch-bar button:hover {
+                color: var(--text-main, #fff);
+            }
+            .gf-chat-row.batch-selected {
+                background: rgba(138, 180, 248, 0.15);
+            }
+            .gf-batch-check {
+                width: 12px; height: 12px;
+                border: 1px solid var(--text-sub, #9aa0a6);
+                border-radius: 3px;
+                margin-right: 6px;
+                flex-shrink: 0;
+                cursor: pointer;
+            }
+            .gf-batch-check.checked {
+                background: var(--accent, #8ab4f8);
+                border-color: var(--accent, #8ab4f8);
+            }
+        `);
+        },
+        getOnboarding() {
+          return {
+            zh: {
+              rant: "你的 Gemini 侧边栏现在是什么样？200 个无序对话，按时间排列，连搜索都没有。想找上周那个关于 Kubernetes 部署的对话？祝你好运，慢慢翻吧。Google Keep 有标签，Gmail 有标签，Google Drive 有文件夹，但 Gemini 就是没有。一致性？不存在的。",
+              features: "侧边栏顶部添加文件夹筛选栏，支持按分组过滤对话。对话项显示彩色文件夹标记，支持拖拽分配。",
+              guide: "1. 在浮动面板的 📁 标签页创建文件夹\n2. 拖拽对话到文件夹\n3. 点击侧边栏顶部的文件夹标签筛选"
+            },
+            en: {
+              rant: "Your Gemini sidebar right now: 200 unorganized conversations sorted by time with no search. Want to find last week's Kubernetes deployment chat? Good luck scrolling. Google Keep has labels, Gmail has labels, Drive has folders, but Gemini has nothing. Consistency? Never heard of it.",
+              features: "Adds a folder filter bar at the top of the sidebar. Filter conversations by group. Chat items show colored folder dots, with drag-and-drop assignment.",
+              guide: "1. Create folders in the 📁 tab of the floating panel\n2. Drag conversations into folders\n3. Click folder tabs at the top of the sidebar to filter"
+            }
+          };
+        },
+        // --- \u6E32\u67D3\u5230\u8BE6\u60C5\u9762\u677F ---
+        renderToDetailsPane(container) {
+          const title = document.createElement("div");
+          title.className = "section-title";
+          title.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+          const titleText = document.createElement("span");
+          titleText.textContent = "Folders";
+          const batchToggle = document.createElement("span");
+          batchToggle.style.cssText = "font-size: 9px; cursor: pointer; opacity: 0.6;";
+          batchToggle.textContent = this._batchMode ? "✕ Cancel" : "☑ Select";
+          batchToggle.onclick = (e) => {
+            e.stopPropagation();
+            this._batchMode = !this._batchMode;
+            this._batchSelected.clear();
+            PanelUI.renderDetailsPane();
+          };
+          title.appendChild(titleText);
+          title.appendChild(batchToggle);
+          container.appendChild(title);
+          if (this._batchMode && this._batchSelected.size > 0) {
+            const batchBar = document.createElement("div");
+            batchBar.className = "gf-batch-bar";
+            const countLabel = document.createElement("span");
+            countLabel.textContent = `${this._batchSelected.size} selected`;
+            batchBar.appendChild(countLabel);
+            this.data.folderOrder.forEach((fid) => {
+              const f = this.data.folders[fid];
+              if (!f) return;
+              const btn = document.createElement("button");
+              btn.textContent = `→ ${f.name}`;
+              btn.onclick = () => this.batchMoveToFolder(fid);
+              batchBar.appendChild(btn);
+            });
+            const unassignBtn = document.createElement("button");
+            unassignBtn.textContent = "→ None";
+            unassignBtn.onclick = () => this.batchMoveToFolder(null);
+            batchBar.appendChild(unassignBtn);
+            container.appendChild(batchBar);
+          }
+          const searchWrap = document.createElement("div");
+          searchWrap.style.cssText = "margin-bottom: 6px;";
+          const searchInput = document.createElement("input");
+          searchInput.type = "text";
+          searchInput.placeholder = "Search chats...";
+          searchInput.style.cssText = "width: 100%; padding: 4px 8px; font-size: 10px; border-radius: 6px; border: 1px solid var(--divider, rgba(255,255,255,0.1)); background: var(--input-bg, rgba(255,255,255,0.05)); color: var(--text-main, #fff); box-sizing: border-box;";
+          searchInput.value = this._searchQuery || "";
+          searchInput.oninput = (e) => {
+            this._searchQuery = e.target.value;
+            PanelUI.renderDetailsPane();
+          };
+          searchWrap.appendChild(searchInput);
+          container.appendChild(searchWrap);
+          const query = (this._searchQuery || "").toLowerCase().trim();
+          this.scanSidebarChats();
+          const chatsByFolder = {};
+          this.chatCache.forEach((chat) => {
+            const fid = this.data.chatToFolder[chat.id];
+            if (fid && this.data.folders[fid]) {
+              if (!chatsByFolder[fid]) chatsByFolder[fid] = [];
+              chatsByFolder[fid].push(chat);
+            }
+          });
+          const sortedFolderOrder = [...this.data.folderOrder].sort((a, b) => {
+            const aPinned = this.data.folders[a]?.pinned ? 1 : 0;
+            const bPinned = this.data.folders[b]?.pinned ? 1 : 0;
+            return bPinned - aPinned;
+          });
+          if (this.data.folderOrder.length === 0) {
+            const hint = document.createElement("div");
+            hint.style.cssText = "font-size: 10px; color: var(--text-sub); opacity: 0.6; padding: 4px 8px;";
+            hint.textContent = "Drag chats here to organize";
+            container.appendChild(hint);
+          } else {
+            sortedFolderOrder.forEach((folderId) => {
+              const folder = this.data.folders[folderId];
+              if (!folder) return;
+              let chats = chatsByFolder[folderId] || [];
+              if (query) {
+                chats = chats.filter((c) => c.title.toLowerCase().includes(query));
+                if (!folder.name.toLowerCase().includes(query) && chats.length === 0) return;
+              }
+              const folderEl = this.createFolderRow(folderId, folder, chats);
+              container.appendChild(folderEl);
+            });
+          }
+          const assignedChatIds = new Set(
+            Object.entries(this.data.chatToFolder).filter(([, fid]) => this.data.folders[fid]).map(([cid]) => cid)
+          );
+          let uncategorized = this.chatCache.filter((chat) => !assignedChatIds.has(chat.id));
+          if (query) {
+            uncategorized = uncategorized.filter((c) => c.title.toLowerCase().includes(query));
+          }
+          if (uncategorized.length > 0) {
+            const uncatHeader = document.createElement("div");
+            uncatHeader.className = "gf-uncategorized-header";
+            const uncatToggle = document.createElement("span");
+            uncatToggle.textContent = this.uncategorizedCollapsed ? "▶" : "▼";
+            uncatToggle.style.fontSize = "8px";
+            const uncatLabel = document.createElement("span");
+            uncatLabel.textContent = `Uncategorized (${uncategorized.length})`;
+            uncatHeader.appendChild(uncatToggle);
+            uncatHeader.appendChild(uncatLabel);
+            uncatHeader.onclick = (e) => {
+              e.stopPropagation();
+              this.uncategorizedCollapsed = !this.uncategorizedCollapsed;
+              PanelUI.renderDetailsPane();
+            };
+            container.appendChild(uncatHeader);
+            if (!this.uncategorizedCollapsed) {
+              uncategorized.forEach((chat) => {
+                const chatRow = document.createElement("div");
+                chatRow.className = "gf-chat-row" + (this._batchSelected.has(chat.id) ? " batch-selected" : "");
+                if (this._batchMode) {
+                  const check = document.createElement("div");
+                  check.className = "gf-batch-check" + (this._batchSelected.has(chat.id) ? " checked" : "");
+                  check.onclick = (e) => {
+                    e.stopPropagation();
+                    if (this._batchSelected.has(chat.id)) {
+                      this._batchSelected.delete(chat.id);
+                    } else {
+                      this._batchSelected.add(chat.id);
+                    }
+                    PanelUI.renderDetailsPane();
+                  };
+                  chatRow.appendChild(check);
+                }
+                if (!this._batchMode) {
+                  chatRow.setAttribute("draggable", "true");
+                  chatRow.ondragstart = (e) => {
+                    this.dragState = { chatId: chat.id, chatTitle: chat.title };
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", chat.id);
+                    chatRow.style.opacity = "0.5";
+                  };
+                  chatRow.ondragend = () => {
+                    chatRow.style.opacity = "";
+                    this.dragState = null;
+                  };
+                }
+                const chatTitle = document.createElement("span");
+                chatTitle.className = "gf-chat-title";
+                chatTitle.textContent = chat.title.length > 20 ? chat.title.slice(0, 20) + "..." : chat.title;
+                chatTitle.title = chat.title;
+                chatRow.appendChild(chatTitle);
+                chatRow.onclick = (e) => {
+                  e.stopPropagation();
+                  if (this._batchMode) {
+                    if (this._batchSelected.has(chat.id)) {
+                      this._batchSelected.delete(chat.id);
+                    } else {
+                      this._batchSelected.add(chat.id);
+                    }
+                    PanelUI.renderDetailsPane();
+                    return;
+                  }
+                  if (chat.element && chat.element.click) {
+                    chat.element.click();
+                  } else if (isValidChatHref(chat.href)) {
+                    window.location.href = chat.href;
+                  }
+                };
+                container.appendChild(chatRow);
+              });
+            }
+          }
+          const addBtn = document.createElement("button");
+          addBtn.className = "gf-add-btn";
+          addBtn.textContent = "+ New Folder";
+          addBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.showFolderModal(null, "Create Folder", "", this.FOLDER_COLORS[0]);
+          };
+          container.appendChild(addBtn);
+          const hasRules = this.data.folderOrder.some((fid) => {
+            const f = this.data.folders[fid];
+            return f && f.rules && f.rules.length > 0;
+          });
+          if (hasRules) {
+            const classifyBtn = document.createElement("button");
+            classifyBtn.className = "gf-add-btn";
+            classifyBtn.style.borderStyle = "solid";
+            classifyBtn.textContent = "";
+            classifyBtn.appendChild(createIcon("bot", 12));
+            classifyBtn.appendChild(document.createTextNode(" Auto Classify"));
+            classifyBtn.onclick = (e) => {
+              e.stopPropagation();
+              const count = this.autoClassify();
+              classifyBtn.textContent = count > 0 ? `✓ Classified ${count} chats` : "✓ Nothing to classify";
+              setTimeout(() => {
+                classifyBtn.textContent = "";
+                classifyBtn.appendChild(createIcon("bot", 12));
+                classifyBtn.appendChild(document.createTextNode(" Auto Classify"));
+              }, 2e3);
+            };
+            container.appendChild(classifyBtn);
+          }
+        },
+        createFolderRow(folderId, folder, chats) {
+          const wrapper = document.createElement("div");
+          wrapper.className = "gf-folder-wrapper";
+          const row = document.createElement("div");
+          row.className = `gf-folder-row ${folder.collapsed ? "collapsed" : ""}`;
+          row.setAttribute("draggable", "true");
+          row.dataset.folderId = folderId;
+          row.ondragstart = (e) => {
+            if (this.dragState) return;
+            this.folderDragState = { folderId };
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", "folder:" + folderId);
+            row.classList.add("dragging");
+          };
+          row.ondragend = () => {
+            row.classList.remove("dragging");
+            this.folderDragState = null;
+            document.querySelectorAll(".gf-folder-row").forEach((el) => {
+              el.classList.remove("drag-above", "drag-below");
+            });
+          };
+          const dot = document.createElement("div");
+          dot.className = "gf-folder-dot";
+          dot.style.background = folder.color;
+          const label = document.createElement("span");
+          label.className = "gf-folder-label";
+          if (folder.pinned) {
+            label.appendChild(createIcon("pin", 10));
+            label.appendChild(document.createTextNode(" " + folder.name));
+          } else {
+            label.textContent = folder.name;
+          }
+          const stats = this.getFolderStats(folderId);
+          const badge = document.createElement("span");
+          badge.className = "gf-folder-badge";
+          badge.textContent = chats.length > 0 ? `(${chats.length})` : "";
+          badge.title = `Total assigned: ${stats.chatCount} | Visible: ${chats.length}`;
+          const toggle = document.createElement("span");
+          toggle.className = "gf-folder-toggle";
+          toggle.textContent = "▼";
+          const actions = document.createElement("div");
+          actions.className = "gf-folder-actions";
+          const editBtn = document.createElement("span");
+          editBtn.className = "gf-folder-action";
+          editBtn.appendChild(createIcon("edit", 12));
+          editBtn.title = "Edit";
+          editBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.showFolderModal(folderId, "Edit Folder", folder.name, folder.color);
+          };
+          const deleteBtn = document.createElement("span");
+          deleteBtn.className = "gf-folder-action";
+          deleteBtn.appendChild(createIcon("trash", 12));
+          deleteBtn.title = "Delete";
+          deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm(`Delete "${folder.name}"?`)) {
+              this.deleteFolder(folderId);
+            }
+          };
+          const pinBtn = document.createElement("span");
+          pinBtn.className = "gf-folder-action";
+          pinBtn.appendChild(createIcon("pin", 12));
+          pinBtn.title = folder.pinned ? "Unpin" : "Pin to top";
+          pinBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.toggleFolderPin(folderId);
+          };
+          actions.appendChild(pinBtn);
+          actions.appendChild(editBtn);
+          actions.appendChild(deleteBtn);
+          row.appendChild(dot);
+          row.appendChild(label);
+          row.appendChild(badge);
+          row.appendChild(actions);
+          row.appendChild(toggle);
+          row.onclick = (e) => {
+            if (e.target.closest(".gf-folder-actions")) return;
+            e.stopPropagation();
+            this.toggleFolderCollapse(folderId);
+          };
+          row.ondragover = (e) => {
+            e.preventDefault();
+            if (this.folderDragState && this.folderDragState.folderId !== folderId) {
+              const rect = row.getBoundingClientRect();
+              const mid = rect.top + rect.height / 2;
+              row.classList.remove("drag-above", "drag-below", "drop-active");
+              if (e.clientY < mid) {
+                row.classList.add("drag-above");
+              } else {
+                row.classList.add("drag-below");
+              }
+            } else if (this.dragState) {
+              row.classList.add("drop-active");
+            }
+          };
+          row.ondragleave = () => {
+            row.classList.remove("drop-active", "drag-above", "drag-below");
+          };
+          row.ondrop = (e) => {
+            e.preventDefault();
+            const wasAbove = row.classList.contains("drag-above");
+            row.classList.remove("drop-active", "drag-above", "drag-below");
+            if (this.folderDragState && this.folderDragState.folderId !== folderId) {
+              this.reorderFolder(this.folderDragState.folderId, folderId, wasAbove ? "before" : "after");
+            } else if (this.dragState) {
+              this.moveChatToFolder(this.dragState.chatId, folderId);
+            }
+          };
+          wrapper.appendChild(row);
+          if (!folder.collapsed && chats.length > 0) {
+            chats.forEach((chat) => {
+              const chatRow = document.createElement("div");
+              chatRow.className = "gf-chat-row" + (this._batchSelected.has(chat.id) ? " batch-selected" : "");
+              if (this._batchMode) {
+                const check = document.createElement("div");
+                check.className = "gf-batch-check" + (this._batchSelected.has(chat.id) ? " checked" : "");
+                check.onclick = (e) => {
+                  e.stopPropagation();
+                  if (this._batchSelected.has(chat.id)) {
+                    this._batchSelected.delete(chat.id);
+                  } else {
+                    this._batchSelected.add(chat.id);
+                  }
+                  PanelUI.renderDetailsPane();
+                };
+                chatRow.appendChild(check);
+              }
+              const chatTitle = document.createElement("span");
+              chatTitle.className = "gf-chat-title";
+              chatTitle.textContent = chat.title.length > 20 ? chat.title.slice(0, 20) + "..." : chat.title;
+              chatTitle.title = chat.title;
+              const removeBtn = document.createElement("span");
+              removeBtn.className = "gf-chat-remove";
+              removeBtn.appendChild(createIcon("x", 10));
+              removeBtn.title = "Remove from folder";
+              removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.moveChatToFolder(chat.id, null);
+              };
+              chatRow.appendChild(chatTitle);
+              if (!this._batchMode) chatRow.appendChild(removeBtn);
+              chatRow.onclick = (e) => {
+                e.stopPropagation();
+                if (this._batchMode) {
+                  if (this._batchSelected.has(chat.id)) {
+                    this._batchSelected.delete(chat.id);
+                  } else {
+                    this._batchSelected.add(chat.id);
+                  }
+                  PanelUI.renderDetailsPane();
+                  return;
+                }
+                if (chat.element && chat.element.click) {
+                  chat.element.click();
+                } else if (isValidChatHref(chat.href)) {
+                  window.location.href = chat.href;
+                }
+              };
+              wrapper.appendChild(chatRow);
+            });
+          }
+          return wrapper;
+        },
+        // --- \u6A21\u6001\u6846 ---
+        showFolderModal(folderId, title, currentName, currentColor) {
+          const isEdit = folderId !== null;
+          const overlay = document.createElement("div");
+          overlay.className = "gf-modal-overlay";
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeOverlay();
+          };
+          document.addEventListener("keydown", escHandler);
+          const closeOverlay = () => {
+            document.removeEventListener("keydown", escHandler);
+            overlay.remove();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeOverlay();
+          };
+          const modal = document.createElement("div");
+          modal.className = "gf-modal";
+          Core.applyTheme(modal, Core.getTheme());
+          const titleEl = document.createElement("div");
+          titleEl.className = "gf-modal-title";
+          titleEl.textContent = title;
+          const input = document.createElement("input");
+          input.className = "gf-modal-input";
+          input.type = "text";
+          input.placeholder = "Folder name";
+          input.value = currentName;
+          const colorsContainer = document.createElement("div");
+          colorsContainer.className = "gf-modal-colors";
+          let selectedColor = currentColor;
+          this.FOLDER_COLORS.forEach((color) => {
+            const colorBtn = document.createElement("div");
+            colorBtn.className = `gf-color-option ${color === selectedColor ? "selected" : ""}`;
+            colorBtn.style.background = color;
+            colorBtn.onclick = () => {
+              colorsContainer.querySelectorAll(".gf-color-option").forEach((c) => c.classList.remove("selected"));
+              colorBtn.classList.add("selected");
+              selectedColor = color;
+              hexInput.value = color;
+            };
+            colorsContainer.appendChild(colorBtn);
+          });
+          const hexWrap = document.createElement("div");
+          hexWrap.style.cssText = "display: flex; align-items: center; gap: 8px; margin-bottom: 16px;";
+          const hexLabel = document.createElement("span");
+          hexLabel.style.cssText = "font-size: 11px; color: var(--text-sub, #9aa0a6);";
+          hexLabel.textContent = "Custom:";
+          const hexInput = document.createElement("input");
+          hexInput.type = "text";
+          hexInput.value = currentColor;
+          hexInput.placeholder = "#ff6600";
+          hexInput.style.cssText = "flex: 1; padding: 6px 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border, rgba(255,255,255,0.1)); background: var(--input-bg, rgba(255,255,255,0.05)); color: var(--text-main, #e8eaed); font-family: monospace; box-sizing: border-box;";
+          hexInput.oninput = () => {
+            const val = hexInput.value.trim();
+            if (/^#[0-9a-fA-F]{3,8}$/.test(val)) {
+              selectedColor = val;
+              colorsContainer.querySelectorAll(".gf-color-option").forEach((c) => c.classList.remove("selected"));
+            }
+          };
+          hexWrap.appendChild(hexLabel);
+          hexWrap.appendChild(hexInput);
+          let rulesData = [];
+          let rulesContainer = null;
+          if (isEdit) {
+            rulesData = [...this.data.folders[folderId].rules || []];
+            const rulesSection = document.createElement("div");
+            rulesSection.style.cssText = "margin-bottom: 16px;";
+            const rulesLabel = document.createElement("div");
+            rulesLabel.style.cssText = "font-size: 11px; color: var(--text-sub, #9aa0a6); margin-bottom: 6px;";
+            rulesLabel.textContent = "Auto-classify rules (keyword or /regex/):";
+            rulesSection.appendChild(rulesLabel);
+            rulesContainer = document.createElement("div");
+            rulesContainer.style.cssText = "display: flex; flex-direction: column; gap: 4px;";
+            const renderRules = () => {
+              rulesContainer.replaceChildren();
+              rulesData.forEach((rule, idx) => {
+                const ruleRow = document.createElement("div");
+                ruleRow.style.cssText = "display: flex; gap: 4px; align-items: center;";
+                const ruleInput = document.createElement("input");
+                ruleInput.type = "text";
+                ruleInput.value = rule.type === "regex" ? `/${rule.value}/` : rule.value;
+                ruleInput.style.cssText = "flex: 1; padding: 4px 8px; font-size: 11px; border-radius: 4px; border: 1px solid var(--border, rgba(255,255,255,0.1)); background: var(--input-bg, rgba(255,255,255,0.05)); color: var(--text-main, #e8eaed); box-sizing: border-box;";
+                ruleInput.oninput = () => {
+                  const val = ruleInput.value.trim();
+                  const regexMatch = val.match(/^\/(.+)\/$/);
+                  if (regexMatch) {
+                    try {
+                      new RegExp(regexMatch[1], "i");
+                      rulesData[idx] = { type: "regex", value: regexMatch[1] };
+                    } catch (e) {
+                      rulesData[idx] = { type: "keyword", value: val };
+                    }
+                  } else {
+                    rulesData[idx] = { type: "keyword", value: val };
+                  }
+                };
+                const delBtn = document.createElement("span");
+                delBtn.appendChild(createIcon("x", 10));
+                delBtn.style.cssText = "cursor: pointer; font-size: 12px; color: var(--text-sub); opacity: 0.6;";
+                delBtn.onclick = () => {
+                  rulesData.splice(idx, 1);
+                  renderRules();
+                };
+                ruleRow.appendChild(ruleInput);
+                ruleRow.appendChild(delBtn);
+                rulesContainer.appendChild(ruleRow);
+              });
+            };
+            renderRules();
+            const addRuleBtn = document.createElement("button");
+            addRuleBtn.style.cssText = "font-size: 10px; padding: 4px 8px; border-radius: 4px; border: 1px dashed var(--divider, rgba(255,255,255,0.15)); background: transparent; color: var(--text-sub, #9aa0a6); cursor: pointer; margin-top: 4px;";
+            addRuleBtn.textContent = "+ Add Rule";
+            addRuleBtn.onclick = () => {
+              rulesData.push({ type: "keyword", value: "" });
+              renderRules();
+            };
+            rulesSection.appendChild(rulesContainer);
+            rulesSection.appendChild(addRuleBtn);
+            modal.rulesSection = rulesSection;
+          }
+          const actionsDiv = document.createElement("div");
+          actionsDiv.className = "gf-modal-actions";
+          if (isEdit) {
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "gf-modal-btn danger";
+            deleteBtn.textContent = NativeUI.t("删除", "Delete");
+            deleteBtn.onclick = () => {
+              if (deleteBtn.dataset.confirmed) {
+                this.deleteFolder(folderId);
+                closeOverlay();
+              } else {
+                deleteBtn.dataset.confirmed = "1";
+                deleteBtn.textContent = NativeUI.t("确认删除？", "Confirm?");
+                setTimeout(() => {
+                  deleteBtn.dataset.confirmed = "";
+                  deleteBtn.textContent = NativeUI.t("删除", "Delete");
+                }, 3e3);
+              }
+            };
+            actionsDiv.appendChild(deleteBtn);
+          }
+          const cancelBtn = document.createElement("button");
+          cancelBtn.className = "gf-modal-btn secondary";
+          cancelBtn.textContent = "Cancel";
+          cancelBtn.onclick = () => closeOverlay();
+          const saveBtn = document.createElement("button");
+          saveBtn.className = "gf-modal-btn primary";
+          saveBtn.textContent = isEdit ? "Save" : "Create";
+          saveBtn.onclick = () => {
+            const name = input.value.trim() || "New Folder";
+            if (isEdit) {
+              this.renameFolder(folderId, name);
+              this.setFolderColor(folderId, selectedColor);
+              this.setFolderRules(folderId, rulesData.filter((r) => r.value));
+            } else {
+              this.createFolder(name, selectedColor);
+            }
+            closeOverlay();
+          };
+          actionsDiv.appendChild(cancelBtn);
+          actionsDiv.appendChild(saveBtn);
+          modal.appendChild(titleEl);
+          modal.appendChild(input);
+          modal.appendChild(colorsContainer);
+          modal.appendChild(hexWrap);
+          if (modal.rulesSection) modal.appendChild(modal.rulesSection);
+          modal.appendChild(actionsDiv);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          input.focus();
+          input.select();
+        }
+      };
+    }
+  });
+
+  // src/modules/prompt_vault.js
+  var PromptVaultModule;
+  var init_prompt_vault = __esm({
+    "src/modules/prompt_vault.js"() {
+      init_logger();
+      init_core();
+      init_native_ui();
+      init_panel_ui();
+      init_state();
+      init_icons();
+      init_counter();
+      PromptVaultModule = {
+        id: "prompt-vault",
+        name: NativeUI.t("提示词金库", "Prompt Vault"),
+        description: NativeUI.t("保存和快速插入常用 Prompt 模板", "Save & quickly insert prompt templates"),
+        iconId: "gem",
+        defaultEnabled: false,
+        STORAGE_KEY: "gemini_prompt_vault",
+        _prompts: [],
+        _getStorageKey() {
+          const user = Core.getCurrentUser();
+          return user && user.includes("@") ? `${this.STORAGE_KEY}_${user}` : this.STORAGE_KEY;
+        },
+        init() {
+          let prompts;
+          try {
+            prompts = GM_getValue(this._getStorageKey(), []);
+          } catch (e) {
+            prompts = [];
+          }
+          this._prompts = prompts;
+          Logger.info("PromptVaultModule initialized", { count: this._prompts.length });
+        },
+        destroy() {
+          const fab = document.getElementById("gv-fab");
+          if (fab) fab.remove();
+          this.removeNativeUI();
+        },
+        onUserChange() {
+          let prompts;
+          try {
+            prompts = GM_getValue(this._getStorageKey(), []);
+          } catch (e) {
+            prompts = [];
+          }
+          this._prompts = prompts;
+          PanelUI.renderDetailsPane();
+        },
+        // --- Native UI: Quick menu button near input area ---
+        injectNativeUI() {
+          const NATIVE_ID = "gc-vault-native";
+          if (document.getElementById(NATIVE_ID)) return;
+          const trailing = document.querySelector(".trailing-actions-wrapper");
+          if (!trailing) return;
+          const btn = document.createElement("button");
+          btn.id = NATIVE_ID;
+          btn.className = "gc-native-btn";
+          btn.appendChild(createIcon("gem", 16));
+          btn.title = "Prompt Vault";
+          btn.style.cssText = "background:transparent;border:none;cursor:pointer;font-size:16px;padding:4px 6px;border-radius:50%;transition:background 0.2s;line-height:1;display:flex;align-items:center;";
+          btn.onmouseenter = () => {
+            btn.style.background = "rgba(128,128,128,0.2)";
+          };
+          btn.onmouseleave = () => {
+            btn.style.background = "transparent";
+          };
+          btn.onclick = (e) => {
+            e.stopPropagation();
+            this._toggleQuickMenu(btn);
+          };
+          trailing.insertBefore(btn, trailing.firstChild);
+        },
+        removeNativeUI() {
+          NativeUI.remove("gc-vault-native");
+          NativeUI.remove("gc-vault-menu");
+          if (this._menuAbort) {
+            this._menuAbort.abort();
+            this._menuAbort = null;
+          }
+        },
+        _toggleQuickMenu(anchorBtn) {
+          const MENU_ID = "gc-vault-menu";
+          const existing = document.getElementById(MENU_ID);
+          if (existing) {
+            existing.remove();
+            return;
+          }
+          const menu = document.createElement("div");
+          menu.id = MENU_ID;
+          menu.className = "gc-dropdown-menu";
+          menu.style.cssText = "position:fixed;bottom:60px;max-height:300px;overflow-y:auto;min-width:200px;";
+          const rect = anchorBtn.getBoundingClientRect();
+          menu.style.left = rect.left + "px";
+          menu.style.bottom = window.innerHeight - rect.top + 4 + "px";
+          if (this._prompts.length === 0) {
+            const empty = document.createElement("div");
+            empty.className = "gc-dropdown-item";
+            empty.style.cssText = "color:#9aa0a6;font-size:12px;";
+            empty.textContent = "还没有保存的提示词";
+            menu.appendChild(empty);
+          } else {
+            const categories = {};
+            this._prompts.forEach((p) => {
+              const cat = p.category || "General";
+              if (!categories[cat]) categories[cat] = [];
+              categories[cat].push(p);
+            });
+            let count = 0;
+            Object.entries(categories).forEach(([catName, prompts]) => {
+              if (count >= 8) return;
+              const catLabel = document.createElement("div");
+              catLabel.style.cssText = "padding:4px 16px;font-size:9px;color:#9aa0a6;text-transform:uppercase;letter-spacing:0.5px;";
+              catLabel.textContent = catName;
+              menu.appendChild(catLabel);
+              prompts.forEach((p) => {
+                if (count >= 8) return;
+                const item = document.createElement("div");
+                item.className = "gc-dropdown-item";
+                item.style.fontSize = "12px";
+                item.textContent = p.name;
+                item.title = p.content.substring(0, 80);
+                item.onclick = (e) => {
+                  e.stopPropagation();
+                  menu.remove();
+                  this.insertPrompt(p.content);
+                };
+                menu.appendChild(item);
+                count++;
+              });
+            });
+          }
+          const divider = document.createElement("div");
+          divider.style.cssText = "border-top:1px solid rgba(255,255,255,0.08);margin:4px 0;";
+          menu.appendChild(divider);
+          const manageLink = document.createElement("div");
+          manageLink.className = "gc-dropdown-item";
+          manageLink.style.cssText = "font-size:11px;color:#8ab4f8;";
+          manageLink.textContent = NativeUI.t("管理提示词...", "Manage prompts...");
+          manageLink.onclick = (e) => {
+            e.stopPropagation();
+            menu.remove();
+            const cm = CounterModule;
+            if (!cm.state.isExpanded) {
+              PanelUI.toggleDetails();
+            }
+          };
+          menu.appendChild(manageLink);
+          document.body.appendChild(menu);
+          if (this._menuAbort) this._menuAbort.abort();
+          this._menuAbort = new AbortController();
+          const signal = this._menuAbort.signal;
+          setTimeout(() => {
+            document.addEventListener("click", (e) => {
+              if (!menu.contains(e.target) && e.target !== anchorBtn) {
+                menu.remove();
+                if (this._menuAbort) {
+                  this._menuAbort.abort();
+                  this._menuAbort = null;
+                }
+              }
+            }, { capture: true, signal });
+          }, 0);
+        },
+        _save() {
+          try {
+            GM_setValue(this._getStorageKey(), this._prompts);
+          } catch (e) {
+          }
+        },
+        addPrompt(name, content, category) {
+          this._prompts.push({
+            id: "p_" + Date.now(),
+            name: name || "Untitled",
+            content: content || "",
+            category: category || "General",
+            createdAt: (/* @__PURE__ */ new Date()).toISOString()
+          });
+          this._save();
+        },
+        deletePrompt(id) {
+          this._prompts = this._prompts.filter((p) => p.id !== id);
+          this._save();
+        },
+        updatePrompt(id, updates) {
+          const p = this._prompts.find((p2) => p2.id === id);
+          if (p) Object.assign(p, updates);
+          this._save();
+        },
+        insertPrompt(content) {
+          const editor = document.querySelector('div.ql-editor[contenteditable="true"]');
+          if (!editor) return;
+          editor.focus();
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          const inputEvent = new InputEvent("beforeinput", {
+            inputType: "insertText",
+            data: content,
+            bubbles: true,
+            cancelable: true,
+            composed: true
+          });
+          const accepted = editor.dispatchEvent(inputEvent);
+          if (!accepted || editor.textContent.trim() === "") {
+            const p = document.createElement("p");
+            p.textContent = content;
+            editor.appendChild(p);
+            editor.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+          const prompt = this._prompts.find((pr) => pr.content === content);
+          if (prompt) {
+            prompt.usedCount = (prompt.usedCount || 0) + 1;
+            prompt.lastUsedAt = (/* @__PURE__ */ new Date()).toISOString();
+            this._save();
+          }
+          Logger.info("Prompt inserted");
+        },
+        getOnboarding() {
+          return {
+            zh: {
+              rant: "每次打开 Gemini 都要重新敲一遍“你是一个资深架构师...”，Google 觉得你的手指不需要休息。ChatGPT 2023 年就有 Custom Instructions 了，Gemini 表示：我们不一样，我们让用户每次都从零开始，这叫“新鲜感”。",
+              features: "输入框旁添加 💎 按钮，点击弹出提示词快捷菜单，一键插入常用提示词。支持分类管理、编辑、使用统计。",
+              guide: "1. 点击输入框旁的 💎 → 2. 选择提示词插入 → 3. 如需管理提示词，点击菜单底部“管理提示词”"
+            },
+            en: {
+              rant: "Every time you open Gemini you retype 'You are a senior architect...' because Google thinks your fingers need exercise. ChatGPT had Custom Instructions in 2023. Gemini says: we're different, we let users start from scratch every time. It's called 'freshness'.",
+              features: "Adds a 💎 button near the input box. Click to open a prompt quick menu and insert saved prompts with one click. Supports categories, editing, and usage stats.",
+              guide: '1. Click 💎 near the input box → 2. Select a prompt to insert → 3. To manage prompts, click "Manage prompts" at the bottom'
+            }
+          };
+        },
+        renderToDetailsPane(container) {
+          const title = document.createElement("div");
+          title.className = "section-title";
+          title.style.cssText = "display: flex; justify-content: space-between; align-items: center;";
+          const titleText = document.createElement("span");
+          titleText.textContent = "Prompt Vault";
+          const addBtn = document.createElement("span");
+          addBtn.style.cssText = "font-size: 12px; cursor: pointer; opacity: 0.6;";
+          addBtn.textContent = "+";
+          addBtn.title = "Add new prompt";
+          addBtn.onclick = (e) => {
+            e.stopPropagation();
+            this.showPromptEditor(null);
+          };
+          title.appendChild(titleText);
+          title.appendChild(addBtn);
+          container.appendChild(title);
+          if (this._prompts.length === 0) {
+            const hint = document.createElement("div");
+            hint.style.cssText = "font-size: 10px; color: var(--text-sub); opacity: 0.6; padding: 4px 8px;";
+            hint.textContent = "No saved prompts. Click + to add.";
+            container.appendChild(hint);
+            return;
+          }
+          const categories = {};
+          this._prompts.forEach((p) => {
+            const cat = p.category || "General";
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(p);
+          });
+          Object.entries(categories).forEach(([catName, prompts]) => {
+            const catLabel = document.createElement("div");
+            catLabel.style.cssText = "font-size: 9px; color: var(--text-sub); opacity: 0.5; padding: 4px 8px 2px; text-transform: uppercase; letter-spacing: 0.5px;";
+            catLabel.textContent = catName;
+            container.appendChild(catLabel);
+            prompts.forEach((p) => {
+              const row = document.createElement("div");
+              row.className = "detail-row";
+              row.title = p.content.length > 100 ? p.content.slice(0, 100) + "..." : p.content;
+              const nameEl = document.createElement("span");
+              nameEl.style.cssText = "flex: 1; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+              nameEl.textContent = p.name;
+              const actions = document.createElement("div");
+              actions.style.cssText = "display: flex; gap: 4px; opacity: 0;";
+              row.onmouseenter = () => actions.style.opacity = "1";
+              row.onmouseleave = () => actions.style.opacity = "0";
+              const insertBtn = document.createElement("span");
+              insertBtn.style.cssText = "cursor: pointer; display: flex; align-items: center; justify-content: center; width: 14px; height: 14px;";
+              insertBtn.appendChild(createIcon("copy", 12));
+              insertBtn.title = "Insert into chat";
+              insertBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.insertPrompt(p.content);
+              };
+              const editBtn = document.createElement("span");
+              editBtn.style.cssText = "cursor: pointer; display: flex; align-items: center; justify-content: center; width: 14px; height: 14px;";
+              editBtn.appendChild(createIcon("edit", 12));
+              editBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.showPromptEditor(p);
+              };
+              const delBtn = document.createElement("span");
+              delBtn.style.cssText = "cursor: pointer; display: flex; align-items: center; justify-content: center; width: 14px; height: 14px;";
+              delBtn.appendChild(createIcon("trash", 12));
+              delBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.deletePrompt(p.id);
+                PanelUI.renderDetailsPane();
+              };
+              actions.appendChild(insertBtn);
+              actions.appendChild(editBtn);
+              actions.appendChild(delBtn);
+              row.appendChild(nameEl);
+              row.appendChild(actions);
+              row.onclick = (e) => {
+                e.stopPropagation();
+                this.insertPrompt(p.content);
+              };
+              container.appendChild(row);
+            });
+          });
+        },
+        showPromptEditor(existing) {
+          const overlay = document.createElement("div");
+          overlay.className = "settings-overlay";
+          const escHandler = (e) => {
+            if (e.key === "Escape") closeOverlay();
+          };
+          document.addEventListener("keydown", escHandler);
+          const closeOverlay = () => {
+            document.removeEventListener("keydown", escHandler);
+            overlay.remove();
+          };
+          overlay.onclick = (e) => {
+            if (e.target === overlay) closeOverlay();
+          };
+          const modal = document.createElement("div");
+          modal.className = "settings-modal";
+          Core.applyTheme(modal, getCurrentTheme());
+          const header = document.createElement("div");
+          header.className = "settings-header";
+          const h3 = document.createElement("h3");
+          h3.textContent = existing ? "Edit Prompt" : "New Prompt";
+          const closeBtn = document.createElement("span");
+          closeBtn.className = "settings-close";
+          closeBtn.textContent = "";
+          closeBtn.appendChild(createIcon("x", 16));
+          closeBtn.onclick = () => closeOverlay();
+          header.appendChild(h3);
+          header.appendChild(closeBtn);
+          const body = document.createElement("div");
+          body.className = "settings-body";
+          const nameInput = document.createElement("input");
+          nameInput.className = "settings-select";
+          nameInput.style.cssText = "width: 100%; margin-bottom: 8px; padding: 8px; box-sizing: border-box;";
+          nameInput.placeholder = "Prompt name";
+          nameInput.value = existing ? existing.name : "";
+          const catInput = document.createElement("input");
+          catInput.className = "settings-select";
+          catInput.style.cssText = "width: 100%; margin-bottom: 8px; padding: 8px; box-sizing: border-box;";
+          catInput.placeholder = "Category (e.g. Coding, Writing)";
+          catInput.value = existing ? existing.category : "General";
+          const contentArea = document.createElement("textarea");
+          contentArea.style.cssText = "width: 100%; height: 120px; padding: 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border, rgba(255,255,255,0.1)); background: var(--input-bg, rgba(255,255,255,0.05)); color: var(--text-main, #fff); resize: vertical; box-sizing: border-box; font-family: inherit;";
+          contentArea.placeholder = "Enter your prompt template...";
+          contentArea.value = existing ? existing.content : "";
+          const saveBtn = document.createElement("button");
+          saveBtn.className = "settings-btn";
+          saveBtn.style.cssText = "background: var(--accent, #8ab4f8); color: #000; font-weight: 500; margin-top: 8px;";
+          saveBtn.textContent = existing ? "Save" : "Create";
+          saveBtn.onclick = () => {
+            const name = nameInput.value.trim() || "Untitled";
+            const content = contentArea.value.trim();
+            const category = catInput.value.trim() || "General";
+            if (!content) return;
+            if (existing) {
+              this.updatePrompt(existing.id, { name, content, category });
+            } else {
+              this.addPrompt(name, content, category);
+            }
+            closeOverlay();
+            PanelUI.renderDetailsPane();
+          };
+          body.appendChild(nameInput);
+          body.appendChild(catInput);
+          body.appendChild(contentArea);
+          body.appendChild(saveBtn);
+          modal.appendChild(header);
+          modal.appendChild(body);
+          overlay.appendChild(modal);
+          document.body.appendChild(overlay);
+          nameInput.focus();
+        }
+      };
+    }
+  });
+
+  // src/modules/default_model.js
+  var DefaultModelModule;
+  var init_default_model = __esm({
+    "src/modules/default_model.js"() {
+      init_constants();
+      init_logger();
+      init_core();
+      init_native_ui();
+      init_counter();
+      DefaultModelModule = {
+        id: "default-model",
+        name: NativeUI.t("默认模型", "Default Model"),
+        description: NativeUI.t("新对话自动选择首选模型", "Auto-select preferred model for new chats"),
+        icon: "🤖",
+        iconId: "settings",
+        defaultEnabled: false,
+        STORAGE_KEY: "gemini_default_model",
+        _preferredModel: "pro",
+        _lastUrl: "",
+        _pollTimer: null,
+        _switching: false,
+        init() {
+          let model;
+          try {
+            model = GM_getValue(this.STORAGE_KEY, "pro");
+          } catch (e) {
+            model = "pro";
+          }
+          this._preferredModel = model;
+          this._lastUrl = location.href;
+          this._startUrlWatcher();
+          Logger.info("DefaultModelModule initialized", { preferred: this._preferredModel });
+        },
+        destroy() {
+          if (this._pollTimer) {
+            clearInterval(this._pollTimer);
+            this._pollTimer = null;
+          }
+          this._switching = false;
+          this.removeNativeUI();
+        },
+        onUserChange() {
+        },
+        // --- \u539F\u751F UI \u6CE8\u5165 ---
+        injectNativeUI() {
+          const LOCK_ID = "gc-model-lock";
+          if (document.getElementById(LOCK_ID)) return;
+          const modelBtn = NativeUI.getModelSwitch();
+          if (!modelBtn) return;
+          const lock = document.createElement("span");
+          lock.id = LOCK_ID;
+          lock.textContent = "🔒";
+          lock.title = "已锁定: " + (this._preferredModel === "flash" ? "Fast" : this._preferredModel === "thinking" ? "Thinking" : "Pro");
+          lock.style.cssText = "font-size:10px;opacity:0.6;margin-left:4px;cursor:default;user-select:none;";
+          modelBtn.parentElement.appendChild(lock);
+        },
+        removeNativeUI() {
+          NativeUI.remove("gc-model-lock");
+        },
+        setPreferredModel(model) {
+          this._preferredModel = model;
+          try {
+            GM_setValue(this.STORAGE_KEY, model);
+          } catch (e) {
+          }
+          this.removeNativeUI();
+          this.injectNativeUI();
+          Logger.info("Default model set", { model });
+        },
+        _isNewChat() {
+          const url = location.href;
+          return url.includes("/app") && !url.includes("/app/") || url.endsWith("/app") || url.match(/\/app\?[^/]*$/) !== null;
+        },
+        _startUrlWatcher() {
+          if (this._pollTimer) return;
+          this._pollTimer = setInterval(() => {
+            const currentUrl = location.href;
+            if (currentUrl !== this._lastUrl) {
+              const wasChat = this._lastUrl.includes("/app/");
+              this._lastUrl = currentUrl;
+              if (this._isNewChat() || !wasChat && this._isNewChat()) {
+                this._attemptModelSwitch();
+              }
+            }
+          }, 800);
+        },
+        async _attemptModelSwitch() {
+          if (this._switching) return;
+          this._switching = true;
+          try {
+            await this._waitForElement('button.input-area-switch, [data-test-id="bard-mode-menu-button"]', 5e3);
+            const currentModel = this._detectCurrentModel();
+            if (currentModel === this._preferredModel) {
+              Logger.info("Already on preferred model", { model: currentModel });
+              return;
+            }
+            const modeBtn = document.querySelector("button.input-area-switch") || document.querySelector('[data-test-id="bard-mode-menu-button"]');
+            if (!modeBtn) return;
+            modeBtn.click();
+            await this._waitForElement('[data-test-id^="bard-mode-option-"]', TIMINGS.MODEL_MENU_TIMEOUT);
+            const modelMap = { flash: "fast", thinking: "thinking", pro: "pro" };
+            const testId = "bard-mode-option-" + (modelMap[this._preferredModel] || this._preferredModel);
+            const option = document.querySelector('[data-test-id="' + testId + '"]');
+            if (option) {
+              option.click();
+              Logger.info("Model switched", { from: currentModel, to: this._preferredModel });
+            } else {
+              document.body.click();
+              Logger.warn("Model option not found", { testId });
+            }
+          } catch (e) {
+            Logger.warn("Model switch failed", { error: e.message });
+          } finally {
+            this._switching = false;
+          }
+        },
+        _detectCurrentModel() {
+          const map = CounterModule.MODEL_DETECT_MAP;
+          const modeBtn = document.querySelector("button.input-area-switch");
+          if (modeBtn) {
+            const text = modeBtn.textContent.trim();
+            if (map[text]) return map[text];
+          }
+          const pill = document.querySelector('[data-test-id="bard-mode-menu-button"]');
+          if (pill) {
+            const full = pill.textContent.trim();
+            const key = map[full] || map[full.split(/\s/)[0]];
+            if (key) return key;
+          }
+          return "flash";
+        },
+        _waitForElement(selector, timeout) {
+          return new Promise((resolve, reject) => {
+            const el = document.querySelector(selector);
+            if (el) return resolve(el);
+            const start = Date.now();
+            let check = null;
+            const cleanup = () => {
+              if (check) clearInterval(check);
+            };
+            check = setInterval(() => {
+              const found = document.querySelector(selector);
+              if (found) {
+                cleanup();
+                resolve(found);
+              } else if (Date.now() - start > timeout) {
+                cleanup();
+                reject(new Error("timeout"));
+              }
+            }, 200);
+          });
+        },
+        _sleep(ms) {
+          return Core.sleep(ms);
+        },
+        getOnboarding() {
+          return {
+            zh: {
+              rant: "Gemini 每次新建对话都默认选 Flash。你明明想用 Pro，但它偏要你每次手动切。这就像一个咖啡店，你天天来点美式，但服务员每次都问“先生，来杯速溶咖啡吧？”。Google，求求你记住用户的选择，这不难对吧？",
+              features: "自动将新对话切换到你的首选模型。模型选择按钮旁显示 🔒 锁定标记。",
+              guide: "1. 在设置中选择首选模型 (Fast/Thinking/Pro)\n2. 新建对话时自动切换\n3. 看到 🔒 表示已锁定"
+            },
+            en: {
+              rant: "Gemini defaults to Flash for every new chat. You want Pro, but it insists on asking every time. It's like a coffee shop where you come daily for an americano, but the barista says 'instant coffee today, sir?' Google, please just remember the user's choice. It's not hard.",
+              features: "Automatically switches new conversations to your preferred model. Shows a 🔒 lock indicator next to the model switch button.",
+              guide: "1. Select your preferred model in Settings (Fast/Thinking/Pro)\n2. New chats auto-switch to it\n3. The 🔒 icon confirms the lock is active"
+            }
+          };
+        },
+        renderToSettings(container) {
+          const row = document.createElement("div");
+          row.className = "settings-row";
+          const label = document.createElement("span");
+          label.textContent = "🤖 首选模型";
+          const select = document.createElement("select");
+          select.style.cssText = "background:var(--input-bg,rgba(255,255,255,0.1));color:var(--text-main);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:13px;";
+          const models = [
+            { value: "flash", label: "3 Fast (Flash)" },
+            { value: "thinking", label: "3 Flash Thinking" },
+            { value: "pro", label: "3 Pro" }
+          ];
+          models.forEach((m) => {
+            const opt = document.createElement("option");
+            opt.value = m.value;
+            opt.textContent = m.label;
+            if (m.value === this._preferredModel) opt.selected = true;
+            select.appendChild(opt);
+          });
+          select.addEventListener("change", () => {
+            this.setPreferredModel(select.value);
+          });
+          row.appendChild(label);
+          row.appendChild(select);
+          container.appendChild(row);
+        }
+      };
+    }
+  });
+
+  // src/modules/batch_delete.js
+  var BatchDeleteModule;
+  var init_batch_delete = __esm({
+    "src/modules/batch_delete.js"() {
+      init_logger();
+      init_core();
+      init_native_ui();
+      init_panel_ui();
+      BatchDeleteModule = {
+        id: "batch-delete",
+        name: NativeUI.t("批量删除", "Batch Delete"),
+        description: NativeUI.t("在面板中批量选择并删除对话", "Batch select and delete chats from panel"),
+        icon: "🗑️",
+        iconId: "trash",
+        defaultEnabled: false,
+        _selected: /* @__PURE__ */ new Set(),
+        _deleting: false,
+        _progress: { current: 0, total: 0 },
+        _batchMode: false,
+        init() {
+          this._selected = /* @__PURE__ */ new Set();
+          this._batchMode = false;
+          Logger.info("BatchDeleteModule initialized");
+        },
+        destroy() {
+          this._selected.clear();
+          this._deleting = false;
+          this._batchMode = false;
+          this.removeNativeUI();
+        },
+        onUserChange() {
+          this._selected.clear();
+          this._batchMode = false;
+        },
+        // --- Native UI: Sidebar batch toolbar ---
+        injectNativeUI() {
+          const TOOLBAR_ID = "gc-batch-toolbar";
+          if (document.getElementById(TOOLBAR_ID)) return;
+          const sidebar = NativeUI.getSidebar();
+          if (!sidebar) return;
+          const toolbar = document.createElement("div");
+          toolbar.id = TOOLBAR_ID;
+          toolbar.style.cssText = "padding:4px 12px;border-bottom:1px solid rgba(255,255,255,0.06);height:auto;max-height:40px;align-self:start;";
+          if (this._batchMode) {
+            this._renderBatchToolbar(toolbar);
+          } else {
+            const enterBtn = document.createElement("button");
+            enterBtn.style.cssText = "background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;width:100%;";
+            enterBtn.textContent = NativeUI.t("🗑️ 批量管理", "🗑️ Batch Manage");
+            enterBtn.onmouseenter = () => {
+              enterBtn.style.color = "#e8eaed";
+            };
+            enterBtn.onmouseleave = () => {
+              enterBtn.style.color = "#9aa0a6";
+            };
+            enterBtn.onclick = () => {
+              this._batchMode = true;
+              this._refreshNativeUI();
+            };
+            toolbar.appendChild(enterBtn);
+          }
+          if (!sidebar) return;
+          const overflowC = sidebar.querySelector(".overflow-container") || sidebar;
+          const folderFilter = document.getElementById("gc-folder-filter");
+          if (folderFilter && folderFilter.parentElement === overflowC) {
+            overflowC.insertBefore(toolbar, folderFilter.nextSibling);
+          } else {
+            overflowC.prepend(toolbar);
+          }
+        },
+        removeNativeUI() {
+          NativeUI.remove("gc-batch-toolbar");
+          document.querySelectorAll(".gc-batch-check").forEach((el) => el.remove());
+          this._batchMode = false;
+        },
+        _refreshNativeUI() {
+          NativeUI.remove("gc-batch-toolbar");
+          document.querySelectorAll(".gc-batch-check").forEach((el) => el.remove());
+          this.injectNativeUI();
+          if (this._batchMode) this._injectCheckboxes();
+        },
+        _renderBatchToolbar(toolbar) {
+          toolbar.style.cssText = "padding:4px 12px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:6px;height:auto;max-height:40px;overflow:hidden;";
+          const selectAllBtn = document.createElement("button");
+          selectAllBtn.style.cssText = "background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;";
+          selectAllBtn.textContent = NativeUI.t("全选", "Select All");
+          selectAllBtn.onclick = () => {
+            const chats = this._scanChats();
+            chats.forEach((c) => this._selected.add(c.id));
+            this._refreshNativeUI();
+          };
+          const cancelBtn = document.createElement("button");
+          cancelBtn.style.cssText = "background:transparent;border:1px solid rgba(255,255,255,0.1);color:#9aa0a6;border-radius:6px;padding:2px 8px;font-size:10px;cursor:pointer;";
+          cancelBtn.textContent = NativeUI.t("取消", "Cancel");
+          cancelBtn.onclick = () => {
+            this._batchMode = false;
+            this._selected.clear();
+            this._refreshNativeUI();
+          };
+          const countLabel = document.createElement("span");
+          countLabel.style.cssText = "font-size:10px;color:#8ab4f8;flex:1;text-align:center;";
+          countLabel.textContent = NativeUI.t("已选 " + this._selected.size + " 个", this._selected.size + " selected");
+          toolbar.appendChild(selectAllBtn);
+          toolbar.appendChild(cancelBtn);
+          toolbar.appendChild(countLabel);
+          if (this._selected.size > 0) {
+            const deleteBtn = document.createElement("button");
+            deleteBtn.style.cssText = "background:#ea4335;color:#fff;border:none;border-radius:6px;padding:2px 10px;font-size:10px;cursor:pointer;";
+            deleteBtn.textContent = NativeUI.t("🗑️ 删除", "🗑️ Delete");
+            deleteBtn.onclick = () => {
+              if (confirm(NativeUI.t("确认删除选中的 " + this._selected.size + " 个对话？", "Delete " + this._selected.size + " selected conversation(s)?"))) {
+                this._batchDelete();
+              }
+            };
+            toolbar.appendChild(deleteBtn);
+          }
+        },
+        _injectCheckboxes() {
+          const chats = Core.scanSidebarChats();
+          chats.forEach((chat) => {
+            if (chat.element.querySelector(".gc-batch-check")) return;
+            const check = document.createElement("div");
+            check.className = "gc-batch-check";
+            const isChecked = this._selected.has(chat.id);
+            check.style.cssText = "width:16px;height:16px;border-radius:3px;border:2px solid " + (isChecked ? "#8ab4f8" : "#5f6368") + ";background:" + (isChecked ? "#8ab4f8" : "transparent") + ";flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:10px;color:#fff;cursor:pointer;margin-right:6px;vertical-align:middle;";
+            check.textContent = isChecked ? "✓" : "";
+            check.onclick = (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (this._selected.has(chat.id)) {
+                this._selected.delete(chat.id);
+              } else {
+                this._selected.add(chat.id);
+              }
+              this._refreshNativeUI();
+            };
+            chat.element.insertBefore(check, chat.element.firstChild);
+          });
+        },
+        _scanChats() {
+          return Core.scanSidebarChats();
+        },
+        async _deleteChat(chatElement) {
+          try {
+            chatElement.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+            await this._sleep(300);
+            const menuBtn = chatElement.querySelector(
+              'button[data-test-id*="menu"], mat-icon[data-mat-icon-name="more_vert"], button[aria-label*="more" i], button[aria-label*="options" i], button[aria-label*="更多" i], button[aria-label*="その他" i], button[aria-label*="더보기" i]'
+            );
+            if (!menuBtn) {
+              const parent = chatElement.closest('mat-list-item, [role="listitem"]') || chatElement.parentElement;
+              const altBtn = parent?.querySelector('button[data-test-id*="menu"], button[aria-label*="more" i], button[aria-label*="更多" i]');
+              if (altBtn) {
+                altBtn.click();
+              } else {
+                throw new Error("Menu button not found");
+              }
+            } else {
+              const clickTarget = menuBtn.closest("button") || menuBtn;
+              clickTarget.click();
+            }
+            await this._sleep(400);
+            const menuPanel = document.querySelector('.cdk-overlay-pane [role="menu"], .cdk-overlay-container [role="menu"], .mat-mdc-menu-panel');
+            const menuScope = menuPanel || document;
+            const menuItems = menuScope.querySelectorAll('[role="menuitem"], mat-menu-item, button.mat-mdc-menu-item');
+            let deleteBtn = null;
+            menuItems.forEach((item) => {
+              const text = item.textContent.trim().toLowerCase();
+              if (text.includes("delete") || text.includes("删除") || text.includes("削除") || text.includes("삭제")) {
+                deleteBtn = item;
+              }
+            });
+            if (!deleteBtn) throw new Error("Delete option not found");
+            deleteBtn.click();
+            await this._sleep(400);
+            const dialog = document.querySelector('mat-dialog-container, .mdc-dialog, [role="dialog"], [role="alertdialog"]');
+            if (!dialog) throw new Error("Dialog not found");
+            const confirmBtns = dialog.querySelectorAll('button.confirm-button, button[data-test-id*="confirm"], mat-dialog-actions button, .mdc-dialog__actions button, [role="dialog"] button, [role="alertdialog"] button');
+            let confirmed = false;
+            for (const btn of confirmBtns) {
+              const text = btn.textContent.trim().toLowerCase();
+              if (text.includes("delete") || text.includes("删除") || text.includes("削除") || text.includes("삭제") || text.includes("confirm") || text.includes("确认") || text.includes("確認") || text.includes("확인")) {
+                btn.click();
+                confirmed = true;
+                break;
+              }
+            }
+            if (!confirmed) {
+              throw new Error("Confirm button not found");
+            }
+            await this._sleep(300);
+            return true;
+          } catch (e) {
+            Logger.warn("Delete failed", { error: e.message });
+            document.body.click();
+            await this._sleep(200);
+            return false;
+          }
+        },
+        async _batchDelete() {
+          if (this._deleting || this._selected.size === 0) return;
+          this._deleting = true;
+          this._progress = { current: 0, total: this._selected.size };
+          const chats = this._scanChats();
+          const toDelete = chats.filter((c) => this._selected.has(c.id));
+          let deleted = 0;
+          let failed = 0;
+          for (const chat of toDelete) {
+            this._progress.current++;
+            PanelUI.renderDetailsPane();
+            const ok = await this._deleteChat(chat.element);
+            if (ok) {
+              deleted++;
+              this._selected.delete(chat.id);
+            } else {
+              failed++;
+            }
+            await this._sleep(500);
+          }
+          this._deleting = false;
+          this._selected.clear();
+          Logger.info("Batch delete complete", { deleted, failed });
+          PanelUI.renderDetailsPane();
+        },
+        _sleep(ms) {
+          return Core.sleep(ms);
+        },
+        renderToDetailsPane(container) {
+          const section = document.createElement("div");
+          section.className = "gf-section";
+          const header = document.createElement("div");
+          header.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;";
+          const title = document.createElement("div");
+          title.style.cssText = "font-weight:600;font-size:13px;color:var(--text-main);";
+          title.textContent = "🗑️ Batch Delete";
+          header.appendChild(title);
+          if (this._deleting) {
+            const progress = document.createElement("span");
+            progress.style.cssText = "font-size:11px;color:var(--accent);";
+            progress.textContent = "Deleting " + this._progress.current + "/" + this._progress.total + "...";
+            header.appendChild(progress);
+          } else if (this._selected.size > 0) {
+            const deleteBtn = document.createElement("button");
+            deleteBtn.style.cssText = "background:#ea4335;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;";
+            deleteBtn.textContent = "Delete " + this._selected.size + " chats";
+            deleteBtn.onclick = () => {
+              if (confirm("确认删除选中的 " + this._selected.size + " 个对话？此操作不可撤销。")) {
+                this._batchDelete();
+              }
+            };
+            header.appendChild(deleteBtn);
+          }
+          section.appendChild(header);
+          const chats = this._scanChats();
+          if (chats.length === 0) {
+            const empty = document.createElement("div");
+            empty.style.cssText = "font-size:12px;color:var(--text-sub);text-align:center;padding:12px;";
+            empty.textContent = "侧栏中未发现对话项";
+            section.appendChild(empty);
+          } else {
+            const list = document.createElement("div");
+            list.style.cssText = "max-height:200px;overflow-y:auto;";
+            chats.forEach((chat) => {
+              const row = document.createElement("div");
+              row.style.cssText = "display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:4px;cursor:pointer;font-size:12px;color:var(--text-main);";
+              row.onmouseenter = () => {
+                row.style.background = "var(--row-hover)";
+              };
+              row.onmouseleave = () => {
+                row.style.background = "";
+              };
+              const check = document.createElement("div");
+              const isChecked = this._selected.has(chat.id);
+              check.style.cssText = "width:16px;height:16px;border-radius:3px;border:2px solid " + (isChecked ? "var(--accent)" : "var(--text-sub)") + ";background:" + (isChecked ? "var(--accent)" : "transparent") + ";flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;";
+              check.textContent = isChecked ? "✓" : "";
+              const label = document.createElement("span");
+              label.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;";
+              label.textContent = chat.title;
+              row.onclick = () => {
+                if (this._selected.has(chat.id)) {
+                  this._selected.delete(chat.id);
+                } else {
+                  this._selected.add(chat.id);
+                }
+                PanelUI.renderDetailsPane();
+              };
+              row.appendChild(check);
+              row.appendChild(label);
+              list.appendChild(row);
+            });
+            section.appendChild(list);
+          }
+          if (chats.length > 0 && !this._deleting) {
+            const actions = document.createElement("div");
+            actions.style.cssText = "display:flex;gap:8px;margin-top:6px;";
+            const selectAll = document.createElement("button");
+            selectAll.style.cssText = "background:var(--btn-bg);color:var(--text-main);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;";
+            selectAll.textContent = "Select All";
+            selectAll.onclick = () => {
+              chats.forEach((c) => this._selected.add(c.id));
+              PanelUI.renderDetailsPane();
+            };
+            const deselectAll = document.createElement("button");
+            deselectAll.style.cssText = "background:var(--btn-bg);color:var(--text-main);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;";
+            deselectAll.textContent = "Deselect All";
+            deselectAll.onclick = () => {
+              this._selected.clear();
+              PanelUI.renderDetailsPane();
+            };
+            actions.appendChild(selectAll);
+            actions.appendChild(deselectAll);
+            section.appendChild(actions);
+          }
+          container.appendChild(section);
+        },
+        getOnboarding() {
+          return {
+            zh: {
+              rant: "Gemini 的删除对话功能：打开菜单 → 点删除 → 确认 → 等待。一个对话要 4 次点击。你有 50 个测试对话要清理？那就点 200 次吧，Google 工程师显然没有清理过自己的对话列表。也可能他们写了个内部工具，只是懒得给你用。",
+              features: "在侧边栏添加批量管理工具栏。激活后每个对话出现复选框，勾选后一键批量删除。支持全选/反选。",
+              guide: "1. 点击侧边栏的“🗑️ 批量管理” → 2. 勾选要删除的对话 → 3. 点击“删除” → 4. 确认"
+            },
+            en: {
+              rant: "Deleting a Gemini conversation: open menu → click delete → confirm → wait. 4 clicks per conversation. Have 50 test chats to clean up? That's 200 clicks. Google engineers clearly never clean up their own conversation lists. Or maybe they have an internal tool, they just can't be bothered to give it to you.",
+              features: "Adds a batch management toolbar to the sidebar. When activated, checkboxes appear on each conversation for one-click batch deletion. Supports select all/deselect.",
+              guide: '1. Click "🗑️ Batch Manage" in the sidebar → 2. Check conversations to delete → 3. Click "Delete" → 4. Confirm'
+            }
+          };
+        }
+      };
+    }
+  });
+
+  // src/modules/quote_reply.js
+  var QuoteReplyModule;
+  var init_quote_reply = __esm({
+    "src/modules/quote_reply.js"() {
+      init_constants();
+      init_logger();
+      init_native_ui();
+      QuoteReplyModule = {
+        id: "quote-reply",
+        name: NativeUI.t("引用回复", "Quote Reply"),
+        description: NativeUI.t("选中文本后快速插入引用到输入框", "Select text to quickly quote into input"),
+        icon: "💬",
+        defaultEnabled: false,
+        _fab: null,
+        _boundPointerUp: null,
+        _boundPointerDown: null,
+        init() {
+          this._boundPointerUp = this._onPointerUp.bind(this);
+          this._boundPointerDown = this._onPointerDown.bind(this);
+          document.addEventListener("pointerup", this._boundPointerUp, true);
+          document.addEventListener("pointerdown", this._boundPointerDown, true);
+          Logger.info("QuoteReplyModule initialized");
+        },
+        destroy() {
+          if (this._boundPointerUp) {
+            document.removeEventListener("pointerup", this._boundPointerUp, true);
+            this._boundPointerUp = null;
+          }
+          if (this._boundPointerDown) {
+            document.removeEventListener("pointerdown", this._boundPointerDown, true);
+            this._boundPointerDown = null;
+          }
+          this._removeFab();
+        },
+        onUserChange() {
+        },
+        _onPointerDown(e) {
+          if (this._fab && this._fab.contains(e.target)) return;
+          this._removeFab();
+        },
+        _onPointerUp(e) {
+          setTimeout(() => {
+            const sel = window.getSelection();
+            if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+              return;
+            }
+            const range = sel.getRangeAt(0);
+            const container = range.commonAncestorContainer;
+            const el = container.nodeType === 3 ? container.parentElement : container;
+            if (!el) return;
+            if (el.closest("#" + PANEL_ID)) return;
+            if (el.closest(".ql-editor")) return;
+            const text = sel.toString().trim();
+            if (!text || text.length < 2) return;
+            this._showFab(e.clientX, e.clientY, text);
+          }, 50);
+        },
+        _showFab(x, y, text) {
+          this._removeFab();
+          const fab = document.createElement("div");
+          fab.style.cssText = [
+            "position:fixed",
+            "z-index:2147483646",
+            "background:var(--accent, #8ab4f8)",
+            "color:#fff",
+            "padding:4px 10px",
+            "border-radius:14px",
+            "font-size:12px",
+            "font-weight:600",
+            "cursor:pointer",
+            "box-shadow:0 2px 8px rgba(0,0,0,0.3)",
+            "user-select:none",
+            "transition:opacity 0.15s, transform 0.15s",
+            "opacity:0",
+            "transform:scale(0.9)"
+          ].join(";");
+          fab.textContent = "💬 Quote";
+          const fabW = 80;
+          const fabH = 28;
+          let left = Math.min(x + 8, window.innerWidth - fabW - 10);
+          let top = Math.max(y - fabH - 8, 10);
+          fab.style.left = left + "px";
+          fab.style.top = top + "px";
+          fab.onclick = (e) => {
+            e.stopPropagation();
+            this._insertQuote(text);
+            this._removeFab();
+          };
+          document.body.appendChild(fab);
+          this._fab = fab;
+          requestAnimationFrame(() => {
+            fab.style.opacity = "1";
+            fab.style.transform = "scale(1)";
+          });
+          setTimeout(() => {
+            if (this._fab === fab) this._removeFab();
+          }, TIMINGS.FAB_AUTO_DISMISS);
+        },
+        _removeFab() {
+          if (this._fab) {
+            this._fab.remove();
+            this._fab = null;
+          }
+        },
+        _insertQuote(text) {
+          const editor = document.querySelector('div.ql-editor[contenteditable="true"]');
+          if (!editor) {
+            Logger.warn("QuoteReply: editor not found");
+            return;
+          }
+          const quoted = text.split("\n").map((line) => "> " + line).join("\n");
+          const fullText = quoted + "\n\n";
+          const isBlank = editor.classList.contains("ql-blank") || editor.textContent.trim() === "" && editor.children.length <= 1;
+          if (isBlank) {
+            editor.replaceChildren();
+            editor.classList.remove("ql-blank");
+          }
+          const lines = fullText.split("\n");
+          lines.forEach((line) => {
+            const p = document.createElement("p");
+            if (line === "") {
+              p.appendChild(document.createElement("br"));
+            } else {
+              p.textContent = line;
+            }
+            editor.appendChild(p);
+          });
+          editor.dispatchEvent(new Event("input", { bubbles: true }));
+          editor.focus();
+          const sel = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          Logger.info("Quote inserted", { length: text.length });
+        }
+      };
+    }
+  });
+
+  // src/modules/ui_tweaks.js
+  var UITweaksModule;
+  var init_ui_tweaks = __esm({
+    "src/modules/ui_tweaks.js"() {
+      init_constants();
+      init_logger();
+      init_core();
+      init_dom_watcher();
+      init_native_ui();
+      UITweaksModule = {
+        id: "ui-tweaks",
+        name: NativeUI.t("UI 自定义", "UI Tweaks"),
+        description: NativeUI.t("Tab 标题 / 快捷键 / 布局调整", "Tab title / hotkeys / layout tweaks"),
+        icon: "🎨",
+        defaultEnabled: false,
+        STORAGE_KEY: "gemini_ui_tweaks",
+        _styleEl: null,
+        _titleObserver: null,
+        _keyHandler: null,
+        features: {
+          tabTitle: { enabled: false, label: NativeUI.t("Tab 标题同步对话名", "Sync tab title with chat name") },
+          ctrlEnter: { enabled: false, label: NativeUI.t("Ctrl+Enter 才发送", "Ctrl+Enter to send") },
+          chatWidth: { enabled: false, label: NativeUI.t("聊天区宽度", "Chat area width"), value: 900 },
+          sidebarWidth: { enabled: false, label: NativeUI.t("侧栏宽度", "Sidebar width"), value: 280 },
+          hideGems: { enabled: false, label: NativeUI.t("隐藏 Gems 入口", "Hide Gems entry") }
+        },
+        init() {
+          let saved;
+          try {
+            saved = GM_getValue(this.STORAGE_KEY, null);
+          } catch (e) {
+            saved = null;
+          }
+          if (saved) {
+            Object.keys(saved).forEach((k) => {
+              if (this.features[k]) {
+                this.features[k].enabled = saved[k].enabled;
+                if (saved[k].value !== void 0) this.features[k].value = saved[k].value;
+              }
+            });
+          }
+          this._applyAll();
+          Logger.info("UITweaksModule initialized", { features: Object.keys(this.features).filter((k) => this.features[k].enabled) });
+        },
+        destroy() {
+          if (this._styleEl) {
+            this._styleEl.remove();
+            this._styleEl = null;
+          }
+          DOMWatcher.unregister("uitweaks-tabtitle");
+          if (this._titleDebounce) {
+            clearTimeout(this._titleDebounce);
+            this._titleDebounce = null;
+          }
+          if (this._keyHandler) {
+            document.removeEventListener("keydown", this._keyHandler, true);
+            this._keyHandler = null;
+          }
+          document.title = "Google Gemini";
+          this.removeNativeUI();
+        },
+        onUserChange() {
+        },
+        // --- \u539F\u751F UI \u6CE8\u5165 ---
+        injectNativeUI() {
+          const IND_ID = "gc-tweaks-indicator";
+          if (document.getElementById(IND_ID)) return;
+          const inputArea = NativeUI.getInputArea();
+          if (!inputArea) return;
+          const dots = document.createElement("div");
+          dots.id = IND_ID;
+          dots.style.cssText = "display:flex;gap:3px;position:absolute;bottom:4px;right:4px;pointer-events:none;z-index:1;";
+          dots.title = this._getStatusText();
+          const keys = ["ctrlEnter", "tabTitle", "chatWidth"];
+          keys.forEach((key) => {
+            const dot = document.createElement("div");
+            const on = this.features[key]?.enabled;
+            dot.style.cssText = "width:4px;height:4px;border-radius:50%;background:" + (on ? "#8ab4f8" : "#555") + ";transition:background 0.2s;";
+            dots.appendChild(dot);
+          });
+          const pos = getComputedStyle(inputArea).position;
+          if (pos === "static" || pos === "") inputArea.style.position = "relative";
+          inputArea.appendChild(dots);
+        },
+        removeNativeUI() {
+          NativeUI.remove("gc-tweaks-indicator");
+        },
+        _getStatusText() {
+          const items = [];
+          if (this.features.ctrlEnter.enabled) items.push("Ctrl+Enter: ON");
+          if (this.features.tabTitle.enabled) items.push("Tab Title: ON");
+          if (this.features.chatWidth.enabled) items.push("Chat Width: " + this.features.chatWidth.value + "px");
+          if (this.features.sidebarWidth.enabled) items.push("Sidebar: " + this.features.sidebarWidth.value + "px");
+          if (this.features.hideGems.enabled) items.push("Hide Gems: ON");
+          return items.length > 0 ? items.join(" | ") : "All tweaks off";
+        },
+        _save() {
+          try {
+            GM_setValue(this.STORAGE_KEY, this.features);
+          } catch (e) {
+          }
+        },
+        _applyAll() {
+          this._applyCSS();
+          this._applyTabTitle();
+          this._applyCtrlEnter();
+        },
+        _applyCSS() {
+          if (this._styleEl) this._styleEl.remove();
+          const rules = [];
+          if (this.features.chatWidth.enabled) {
+            const w = this.features.chatWidth.value || 900;
+            rules.push("main .conversation-container, main .chat-window { max-width: " + w + "px !important; }");
+          }
+          if (this.features.sidebarWidth.enabled) {
+            const w = this.features.sidebarWidth.value || 280;
+            rules.push("bard-sidenav { width: " + w + "px !important; min-width: " + w + "px !important; }");
+          }
+          if (this.features.hideGems.enabled) {
+            rules.push('a[href*="/gems/"] { display: none !important; }');
+          }
+          if (rules.length > 0) {
+            const style = document.createElement("style");
+            style.textContent = rules.join("\n");
+            document.head.appendChild(style);
+            this._styleEl = style;
+          }
+        },
+        _applyTabTitle() {
+          DOMWatcher.unregister("uitweaks-tabtitle");
+          if (this._titleDebounce) {
+            clearTimeout(this._titleDebounce);
+            this._titleDebounce = null;
+          }
+          if (!this.features.tabTitle.enabled) return;
+          const updateTitle = () => {
+            const heading = document.querySelector('h1.conversation-title, [data-test-id="conversation-title"]');
+            if (heading && heading.textContent.trim()) {
+              const text = heading.textContent.trim();
+              const isDefault = /^Conversation with Gemini|^与\s*Gemini|Gemini\s*との|Gemini\s*와의/i.test(text);
+              if (!isDefault && text !== document.title) {
+                document.title = text + " - Gemini";
+              }
+            } else {
+              const firstMsg = document.querySelector(".user-query-text, .query-text");
+              if (firstMsg && firstMsg.textContent.trim()) {
+                const t = firstMsg.textContent.trim().substring(0, 50);
+                if (document.title === "Google Gemini") {
+                  document.title = t + "... - Gemini";
+                }
+              }
+            }
+          };
+          updateTitle();
+          DOMWatcher.register("uitweaks-tabtitle", {
+            match: (m) => {
+              if (m.type === "characterData") return true;
+              if (m.type === "childList") {
+                const target = m.target;
+                if (!target || !target.closest) return true;
+                return !!target.closest('main, .chat-container, [role="main"]');
+              }
+              return false;
+            },
+            callback: updateTitle,
+            debounce: TIMINGS.TITLE_DEBOUNCE
+          });
+        },
+        _applyCtrlEnter() {
+          if (this._keyHandler) {
+            document.removeEventListener("keydown", this._keyHandler, true);
+            this._keyHandler = null;
+          }
+          if (!this.features.ctrlEnter.enabled) return;
+          this._keyHandler = (e) => {
+            if (e.key !== "Enter") return;
+            const target = e.target;
+            if (!target.closest('.ql-editor, [contenteditable="true"]')) return;
+            if (e.isComposing) return;
+            if (!e.ctrlKey && !e.metaKey) {
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+            } else {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              const sendBtn = document.querySelector('button.send-button, button[aria-label*="Send"]');
+              if (sendBtn && !sendBtn.disabled) {
+                sendBtn.click();
+              }
+            }
+          };
+          document.addEventListener("keydown", this._keyHandler, true);
+        },
+        toggleFeature(key) {
+          if (!this.features[key]) return;
+          this.features[key].enabled = !this.features[key].enabled;
+          this._save();
+          this._applyAll();
+          this.removeNativeUI();
+          this.injectNativeUI();
+        },
+        setFeatureValue(key, value) {
+          if (!this.features[key]) return;
+          this.features[key].value = value;
+          this._save();
+          this._applyAll();
+        },
+        getOnboarding() {
+          return {
+            zh: {
+              rant: "Gemini 不支持 Ctrl+Enter 发送，Enter 直接发送意味着你永远不能在消息里换行——除非你知道 Shift+Enter 这个隐藏快捷键。浏览器标签页标题永远显示“Gemini”，开了 10 个对话标签？全是 Gemini - Gemini - Gemini。Google 的 UX 团队是不是觉得用户只用一个标签页？",
+              features: "三个微调开关：Ctrl+Enter 发送、标签页显示对话标题、布局优化。输入框旁 3 个小圆点显示当前状态。",
+              guide: "1. 在设置中开启需要的调整项\n2. 输入框右下角的小圆点指示哪些调整已生效\n3. 亮蓝色=已启用"
+            },
+            en: {
+              rant: "Gemini doesn't support Ctrl+Enter to send. Enter sends immediately, meaning you can never add newlines — unless you know the secret Shift+Enter shortcut. Browser tab title always shows 'Gemini' — open 10 chat tabs? All 'Gemini - Gemini - Gemini'. Does the UX team think users only use one tab?",
+              features: "Three micro-tweaks: Ctrl+Enter to send, tab title shows conversation name, layout adjustments. Three tiny dots near the input area show current status.",
+              guide: "1. Enable desired tweaks in Settings\n2. Dots at the bottom-right of the input area indicate active tweaks\n3. Blue = enabled"
+            }
+          };
+        },
+        renderToSettings(container) {
+          Object.keys(this.features).forEach((key) => {
+            const feat = this.features[key];
+            const row = document.createElement("div");
+            row.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:6px 0;";
+            const labelEl = document.createElement("span");
+            labelEl.style.cssText = "font-size:13px;color:var(--text-main);";
+            labelEl.textContent = feat.label;
+            row.appendChild(labelEl);
+            const rightSide = document.createElement("div");
+            rightSide.style.cssText = "display:flex;align-items:center;gap:8px;";
+            if (feat.value !== void 0) {
+              const input = document.createElement("input");
+              input.type = "number";
+              input.value = feat.value;
+              input.style.cssText = "width:60px;background:var(--input-bg,rgba(255,255,255,0.1));color:var(--text-main);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:12px;text-align:center;";
+              input.onchange = () => {
+                const v = parseInt(input.value, 10);
+                if (v > 0) this.setFeatureValue(key, v);
+              };
+              const unit = document.createElement("span");
+              unit.style.cssText = "font-size:11px;color:var(--text-sub);";
+              unit.textContent = "px";
+              rightSide.appendChild(input);
+              rightSide.appendChild(unit);
+            }
+            const toggle = document.createElement("div");
+            toggle.className = "toggle-switch " + (feat.enabled ? "on" : "");
+            toggle.onclick = () => {
+              this.toggleFeature(key);
+              toggle.classList.toggle("on");
+            };
+            rightSide.appendChild(toggle);
+            row.appendChild(rightSide);
+            container.appendChild(row);
+          });
+        }
+      };
+    }
+  });
+
+  // src/main.js
+  var require_main = __commonJS({
+    "src/main.js"() {
+      init_constants();
+      init_logger();
+      init_core();
+      init_state();
+      init_module_registry();
+      init_native_ui();
+      init_dom_watcher();
+      init_panel_ui();
+      init_guided_tour();
+      init_debug_utils();
+      init_counter();
+      init_export();
+      init_folders();
+      init_prompt_vault();
+      init_default_model();
+      init_batch_delete();
+      init_quote_reply();
+      init_ui_tweaks();
+      ModuleRegistry.register(CounterModule);
+      ModuleRegistry.register(ExportModule);
+      ModuleRegistry.register(FoldersModule);
+      ModuleRegistry.register(PromptVaultModule);
+      ModuleRegistry.register(DefaultModelModule);
+      ModuleRegistry.register(BatchDeleteModule);
+      ModuleRegistry.register(QuoteReplyModule);
+      ModuleRegistry.register(UITweaksModule);
+      var lastDetectedUser = null;
+      function lazyDetect() {
+        try {
+          const detected = Core.detectUser();
+          if (detected !== lastDetectedUser) {
+            Logger.debug("User detection changed", { detected });
+            lastDetectedUser = detected;
+          }
+          if (detected && detected !== getCurrentUser()) {
+            let guestState = null;
+            if (getCurrentUser() === TEMP_USER && ModuleRegistry.isEnabled("counter")) {
+              try {
+                guestState = JSON.parse(JSON.stringify(CounterModule.state));
+              } catch (e) {
+                guestState = null;
+              }
+            }
+            setCurrentUser(detected);
+            Core.registerUser(detected);
+            Logger.info("User switched", { currentUser: detected });
+            if (getInspectingUser() === TEMP_USER || getInspectingUser() === getCurrentUser()) {
+              setInspectingUser(getCurrentUser());
+            }
+            if (guestState && (guestState.total > 0 || Object.keys(guestState.chats).length > 0)) {
+              const cm = CounterModule;
+              cm.state.total += typeof guestState.total === "number" ? guestState.total : 0;
+              cm.state.totalChatsCreated += typeof guestState.totalChatsCreated === "number" ? guestState.totalChatsCreated : 0;
+              for (const [day, counts] of Object.entries(guestState.dailyCounts || {})) {
+                if (typeof counts !== "object" || !counts) continue;
+                if (!cm.state.dailyCounts[day]) {
+                  cm.state.dailyCounts[day] = counts;
+                } else {
+                  cm.state.dailyCounts[day].messages += typeof counts.messages === "number" ? counts.messages : 0;
+                  cm.state.dailyCounts[day].chats += typeof counts.chats === "number" ? counts.chats : 0;
+                  if (counts.byModel && typeof counts.byModel === "object") {
+                    if (!cm.state.dailyCounts[day].byModel) {
+                      cm.state.dailyCounts[day].byModel = { flash: 0, thinking: 0, pro: 0 };
+                    }
+                    cm.state.dailyCounts[day].byModel.flash += typeof counts.byModel.flash === "number" ? counts.byModel.flash : 0;
+                    cm.state.dailyCounts[day].byModel.thinking += typeof counts.byModel.thinking === "number" ? counts.byModel.thinking : 0;
+                    cm.state.dailyCounts[day].byModel.pro += typeof counts.byModel.pro === "number" ? counts.byModel.pro : 0;
+                  }
+                }
+              }
+              for (const [cid, count] of Object.entries(guestState.chats || {})) {
+                cm.state.chats[cid] = (cm.state.chats[cid] || 0) + (typeof count === "number" ? count : 0);
+              }
+              Logger.info(`Merged ${guestState.total} messages from Guest session to ${getCurrentUser()}`);
+              cm.saveData();
+            }
+            ModuleRegistry.notifyUserChange(getInspectingUser());
+          }
+          if (ModuleRegistry.isEnabled("counter")) {
+            const cm = CounterModule;
+            const newAcct = cm.detectAccountType();
+            if (newAcct !== cm.accountType) {
+              cm.accountType = newAcct;
+              if (document.getElementById(PANEL_ID)) PanelUI.update();
+            }
+          }
+        } catch (e) {
+          Logger.error("lazyDetect error", e);
+        }
+      }
+      function onModelMutation() {
+        if (!ModuleRegistry.isEnabled("counter")) return;
+        const cm = CounterModule;
+        const newModel = cm.detectModel();
+        if (newModel !== cm.currentModel) {
+          cm.currentModel = newModel;
+          if (document.getElementById(PANEL_ID)) PanelUI.update();
+        }
+      }
+      function onDOMStructureChange() {
+        if (ModuleRegistry.isEnabled("counter") && !document.getElementById(PANEL_ID)) {
+          PanelUI.create();
+        }
+        NativeUI.markAllDirty();
+        NativeUI.tick();
+      }
+      PanelUI.injectStyles();
+      ModuleRegistry.init();
+      DOMWatcher.init();
+      Core._updateAutoListener(Core.getTheme());
+      DOMWatcher.register("model-mutation", {
+        match: (m) => {
+          if (m.type === "attributes") {
+            const target = m.target;
+            if (!target || !target.matches) return false;
+            return target.matches('button.input-area-switch, [data-test-id="bard-mode-menu-button"], .bard-mode-list-button');
+          }
+          if (m.type === "childList" && m.target?.closest) {
+            return !!m.target.closest("input-area-v2, .input-area-container, .bottom-container");
+          }
+          return false;
+        },
+        callback: onModelMutation,
+        debounce: TIMINGS.MODEL_MUTATION_DEBOUNCE
+      });
+      DOMWatcher.register("dom-structure", {
+        match: (m) => m.type === "childList",
+        callback: onDOMStructureChange,
+        debounce: TIMINGS.NATIVEUI_DEBOUNCE
+      });
+      function startOnboardingQueue() {
+        let seen;
+        try {
+          seen = GM_getValue(GLOBAL_KEYS.ONBOARDING, {});
+        } catch (e) {
+          seen = {};
+        }
+        const queue = [];
+        ModuleRegistry.enabledModules.forEach((id) => {
+          const mod = ModuleRegistry.modules[id];
+          if (!seen[id] && typeof mod?.getOnboarding === "function") {
+            queue.push(id);
+            seen[id] = true;
+          }
+        });
+        if (queue.length === 0) return;
+        try {
+          GM_setValue(GLOBAL_KEYS.ONBOARDING, seen);
+        } catch (e) {
+        }
+        let i = 0;
+        function showNext() {
+          if (i >= queue.length) return;
+          const id = queue[i++];
+          PanelUI.showOnboarding(id);
+          let check = null;
+          let timeout = null;
+          const cleanup = () => {
+            if (check) clearInterval(check);
+            if (timeout) clearTimeout(timeout);
+          };
+          check = setInterval(() => {
+            if (!document.querySelector(".gc-onboarding-overlay")) {
+              cleanup();
+              setTimeout(showNext, 500);
+            }
+          }, 300);
+          timeout = setTimeout(cleanup, 1e4);
+        }
+        setTimeout(showNext, 500);
+      }
+      if (!GuidedTour.hasSeen()) {
+        setTimeout(() => GuidedTour.start(startOnboardingQueue), 2500);
+      } else {
+        startOnboardingQueue();
+      }
+      lazyDetect();
+      onDOMStructureChange();
+      var pollTimer = setInterval(lazyDetect, TIMINGS.SLOW_POLL);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          if (!pollTimer) pollTimer = setInterval(lazyDetect, TIMINGS.SLOW_POLL);
+          lazyDetect();
+          onModelMutation();
+          const user = getInspectingUser();
+          if (user && user !== TEMP_USER && ModuleRegistry.isEnabled("counter")) {
+            CounterModule.loadDataForUser(user);
+          }
+        } else {
+          if (pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        }
+      });
+      GM_registerMenuCommand("🧰 Debug: Show Detected User", () => {
+        debugShowDetectedUser();
+      });
+      GM_registerMenuCommand("🧰 Debug: Dump Storage Keys", () => {
+        debugDumpStorageKeys();
+      });
+      GM_registerMenuCommand("🧰 Debug: Export All Storage", () => {
+        debugExportAllStorage();
+      });
+      GM_registerMenuCommand("🧰 Debug: Export Legacy Data", () => {
+        debugExportLegacyData();
+      });
+      GM_registerMenuCommand("🧰 Debug: Export Logs", () => {
+        debugExportLogs();
+      });
+      GM_registerMenuCommand("🧰 Debug: Dump Gemini Storage", () => {
+        debugDumpGeminiStores();
+      });
+      GM_registerMenuCommand("🔄 Reset Position", () => {
+        GM_setValue(GLOBAL_KEYS.POS, DEFAULT_POS);
+        location.reload();
+      });
+    }
+  });
+  require_main();
+})();

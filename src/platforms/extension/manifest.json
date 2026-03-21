@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Gemini Ultra Toolkit",
-  "version": "9.0.0",
+  "name": "Gemini Primer++",
+  "version": "10.17",
   "description": "Modular Gemini assistant platform — counter, heatmap, quota, folders & more",
   "permissions": [
     "storage",
@@ -11,7 +11,6 @@
     {
       "matches": ["https://gemini.google.com/*"],
       "js": ["content.js"],
-      "css": ["styles.css"],
       "run_at": "document_idle"
     }
   ],
@@ -25,7 +24,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "gemini-ultra-toolkit@example.com",
+      "id": "gemini-primer-pp@example.com",
       "strict_min_version": "109.0"
     }
   }

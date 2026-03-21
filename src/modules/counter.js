@@ -1,394 +1,342 @@
-// src/modules/counter.js — Message counter with model tracking, streaks, quota
+import { TIMINGS, GLOBAL_KEYS, TEMP_USER } from '../constants.js';
+import { Logger } from '../logger.js';
+import { Core } from '../core.js';
+import { ModuleRegistry } from '../module_registry.js';
+import { PanelUI } from '../panel_ui.js';
+import { NativeUI } from '../native_ui.js';
+import { calculateStreaks, getLast7DaysData, ensureTodayEntry } from '../../lib/counter_calc.js';
 
-import { TIMINGS, GLOBAL_KEYS, TEMP_USER } from '../core/constants.js';
-import { SELECTORS, MODEL_DETECT_MAP } from '../core/selectors.js';
+export const CounterModule = {
+    id: 'counter',
+    name: NativeUI.t('消息计数器', 'Message Counter'),
+    description: NativeUI.t('统计消息数量、热力图、配额追踪', 'Message stats, heatmap & quota tracking'),
+    icon: '\uD83D\uDCCA',
+    defaultEnabled: true,
 
-export function createCounterModule({ storage, Core, Logger, getModuleRegistry, getPanelUI }) {
-    const COOLDOWN = TIMINGS.COUNTER_COOLDOWN;
-
-    const MODEL_CONFIG = {
+    // --- Module private constants ---
+    COOLDOWN: TIMINGS.COUNTER_COOLDOWN,
+    MODEL_CONFIG: {
         flash: { label: '3 Flash', multiplier: 0, color: '#34a853' },
         thinking: { label: '3 Flash Thinking', multiplier: 0.33, color: '#fbbc04' },
-        pro: { label: '3 Pro', multiplier: 1, color: '#ea4335' },
-    };
+        pro: { label: '3 Pro', multiplier: 1, color: '#ea4335' }
+    },
+    MODEL_DETECT_MAP: {
+        'Fast': 'flash', 'Flash': 'flash', 'flash': 'flash',
+        'Thinking': 'thinking', 'thinking': 'thinking',
+        'Pro': 'pro', 'pro': 'pro',
+        '\u5FEB\u901F': 'flash', '\u601D\u8003': 'thinking', '\u4E13\u4E1A': 'pro',
+        '\u9AD8\u901F': 'flash', '\u30D7\u30ED': 'pro',
+        '\uBE60\uB978': 'flash', '\uC0AC\uACE0': 'thinking', '\uD504\uB85C': 'pro'
+    },
 
-    let _unsubStorage = null;
+    // --- Module private state ---
+    resetHour: 0,
+    quotaLimit: 50,
+    currentModel: 'flash',
+    accountType: 'free',
+    lastDisplayedVal: -1,
+    lastCountTime: 0,
 
-    return {
-        id: 'counter',
-        name: '消息计数器',
-        description: '统计消息数量、热力图、配额追踪',
-        icon: '📊',
-        defaultEnabled: true,
+    state: {
+        total: 0,
+        totalChatsCreated: 0,
+        chats: {},
+        dailyCounts: {},
+        viewMode: 'today',
+        isExpanded: false,
+        resetStep: 0
+    },
 
-        MODEL_CONFIG,
-        MODEL_DETECT_MAP,
+    // --- Lifecycle ---
+    init() {
+        try { this.resetHour = GM_getValue(GLOBAL_KEYS.RESET_HOUR, 0); } catch (e) { this.resetHour = 0; }
+        try { this.quotaLimit = GM_getValue(GLOBAL_KEYS.QUOTA, 50); } catch (e) { this.quotaLimit = 50; }
+        this.bindEvents();
+        Logger.info('CounterModule initialized');
+    },
 
-        resetHour: 0,
-        quotaLimit: 50,
-        currentModel: 'flash',
-        accountType: 'free',
-        lastDisplayedVal: -1,
-        lastCountTime: 0,
+    destroy() {
+        if (this._boundKeyHandler) {
+            document.removeEventListener('keydown', this._boundKeyHandler, true);
+            this._boundKeyHandler = null;
+        }
+        if (this._boundClickHandler) {
+            document.removeEventListener('click', this._boundClickHandler, true);
+            this._boundClickHandler = null;
+        }
+        if (this._cidPoller) {
+            clearInterval(this._cidPoller);
+            this._cidPoller = null;
+        }
+        Core.setupStorageListener(null, null);
+        Logger.info('CounterModule destroyed');
+    },
 
-        state: {
-            total: 0,
-            totalChatsCreated: 0,
-            chats: {},
-            dailyCounts: {},
-            viewMode: 'today',
-            isExpanded: false,
-            resetStep: 0,
-        },
+    onUserChange(user) {
+        this.loadDataForUser(user);
+    },
 
-        _boundKeyHandler: null,
-        _boundClickHandler: null,
+    _boundKeyHandler: null,
+    _boundClickHandler: null,
+    _cidPoller: null,
 
-        // --- Lifecycle ---
-        init() {
-            this.resetHour = storage.get(GLOBAL_KEYS.RESET_HOUR, 0);
-            this.quotaLimit = storage.get(GLOBAL_KEYS.QUOTA, 50);
-            this.bindEvents();
-            Logger.info('CounterModule initialized');
-        },
+    bindEvents() {
+        if (this._boundKeyHandler && this._boundClickHandler) return;
+        if (this._cidPoller) {
+            clearInterval(this._cidPoller);
+            this._cidPoller = null;
+        }
+        if (this._boundKeyHandler) {
+            document.removeEventListener('keydown', this._boundKeyHandler, true);
+            this._boundKeyHandler = null;
+        }
+        if (this._boundClickHandler) {
+            document.removeEventListener('click', this._boundClickHandler, true);
+            this._boundClickHandler = null;
+        }
 
-        destroy() {
-            if (this._boundKeyHandler) {
-                document.removeEventListener('keydown', this._boundKeyHandler, true);
-                this._boundKeyHandler = null;
+        this._boundKeyHandler = (e) => {
+            if (!ModuleRegistry.isEnabled('counter')) return;
+            if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.originalEvent?.isComposing) return;
+            const act = document.activeElement;
+            if (act && (act.tagName === 'TEXTAREA' || act.getAttribute('contenteditable') === 'true')) {
+                setTimeout(() => this.attemptIncrement(), 50);
             }
-            if (this._boundClickHandler) {
-                document.removeEventListener('click', this._boundClickHandler, true);
-                this._boundClickHandler = null;
-            }
-            if (_unsubStorage) {
-                _unsubStorage();
-                _unsubStorage = null;
-            }
-            Logger.info('CounterModule destroyed');
-        },
+        };
 
-        onUserChange(user) {
-            this.loadDataForUser(user);
-        },
-
-        // --- Event Binding ---
-        bindEvents() {
-            if (this._boundKeyHandler && this._boundClickHandler) return;
-            if (this._boundKeyHandler) {
-                document.removeEventListener('keydown', this._boundKeyHandler, true);
-                this._boundKeyHandler = null;
-            }
-            if (this._boundClickHandler) {
-                document.removeEventListener('click', this._boundClickHandler, true);
-                this._boundClickHandler = null;
-            }
-
-            this._boundKeyHandler = (e) => {
-                if (!getModuleRegistry().isEnabled('counter')) return;
-                if (e.key !== 'Enter' || e.shiftKey || e.isComposing || e.originalEvent?.isComposing) return;
-                const act = document.activeElement;
-                if (act && (act.tagName === 'TEXTAREA' || act.getAttribute('contenteditable') === 'true')) {
-                    setTimeout(() => this.attemptIncrement(), 50);
+        this._boundClickHandler = (e) => {
+            if (!ModuleRegistry.isEnabled('counter')) return;
+            const btn = e.target?.closest ? e.target.closest('button') : null;
+            if (btn && !btn.disabled) {
+                if (btn.classList.contains('send-button')) {
+                    this.attemptIncrement();
+                    return;
                 }
-            };
-
-            this._boundClickHandler = (e) => {
-                if (!getModuleRegistry().isEnabled('counter')) return;
-                const btn = e.target?.closest ? e.target.closest('button') : null;
-                if (btn && !btn.disabled) {
-                    if (btn.classList.contains('send-button')) {
-                        this.attemptIncrement();
-                        return;
-                    }
-                    const label = btn.getAttribute('aria-label') || '';
-                    if (label.includes('Send') || label.includes('发送')) {
-                        this.attemptIncrement();
-                    }
+                const label = btn.getAttribute('aria-label') || '';
+                if (label.includes('Send') || label.includes('\u53D1\u9001')) {
+                    this.attemptIncrement();
                 }
-            };
-
-            document.addEventListener('keydown', this._boundKeyHandler, true);
-            document.addEventListener('click', this._boundClickHandler, true);
-        },
-
-        // --- Data Management ---
-        loadDataForUser(targetUser) {
-            if (!targetUser) return;
-
-            // Cross-tab sync via storage.onChange
-            if (_unsubStorage) _unsubStorage();
-            const storageKey = `gemini_store_${targetUser}`;
-            _unsubStorage = storage.onChange(storageKey, (newVal) => {
-                if (!newVal) return;
-                this.state.total = newVal.total || 0;
-                this.state.totalChatsCreated = newVal.totalChatsCreated || 0;
-                this.state.chats = newVal.chats || {};
-                this.state.dailyCounts = newVal.dailyCounts || {};
-                getPanelUI().update();
-            });
-
-            if (targetUser === TEMP_USER) {
-                Object.assign(this.state, {
-                    total: 0, totalChatsCreated: 0, chats: {}, dailyCounts: {},
-                    viewMode: 'today', isExpanded: false, resetStep: 0,
-                });
-                return;
             }
+        };
 
-            const savedData = storage.get(storageKey, null);
-            if (savedData) {
-                this.state.total = savedData.total || 0;
-                this.state.totalChatsCreated = savedData.totalChatsCreated || 0;
-                this.state.chats = savedData.chats || {};
-                this.state.dailyCounts = savedData.dailyCounts || {};
-                // Legacy data migration
-                if (savedData.session && Object.keys(this.state.dailyCounts).length === 0) {
-                    const today = Core.getDayKey(this.resetHour);
-                    this.state.dailyCounts[today] = { messages: savedData.session, chats: 0 };
-                }
-            } else {
-                Object.assign(this.state, {
-                    total: 0, totalChatsCreated: 0, chats: {}, dailyCounts: {},
-                    viewMode: 'today', isExpanded: false, resetStep: 0,
-                });
+        document.addEventListener('keydown', this._boundKeyHandler, true);
+        document.addEventListener('click', this._boundClickHandler, true);
+    },
+
+    // --- Data management ---
+    loadDataForUser(targetUser) {
+        if (!targetUser) return;
+
+        Core.setupStorageListener(targetUser, (newVal) => {
+            this.state.total = newVal.total || 0;
+            this.state.totalChatsCreated = newVal.totalChatsCreated || 0;
+            this.state.chats = newVal.chats || {};
+            this.state.dailyCounts = newVal.dailyCounts || {};
+            PanelUI.update();
+        });
+
+        if (targetUser === TEMP_USER) {
+            Object.assign(this.state, { total: 0, totalChatsCreated: 0, chats: {}, dailyCounts: {}, viewMode: 'today', isExpanded: false, resetStep: 0 });
+            return;
+        }
+
+        const storageKey = `gemini_store_${targetUser}`;
+        let savedData;
+        try { savedData = GM_getValue(storageKey, null); }
+        catch (e) { savedData = null; }
+        if (savedData && typeof savedData === 'object') {
+            this.state.total = (typeof savedData.total === 'number' ? savedData.total : 0);
+            this.state.totalChatsCreated = (typeof savedData.totalChatsCreated === 'number' ? savedData.totalChatsCreated : 0);
+            this.state.chats = (typeof savedData.chats === 'object' && savedData.chats ? savedData.chats : {});
+            this.state.dailyCounts = (typeof savedData.dailyCounts === 'object' && savedData.dailyCounts ? savedData.dailyCounts : {});
+            if (savedData.session && Object.keys(this.state.dailyCounts).length === 0) {
+                const today = Core.getDayKey(this.resetHour);
+                this.state.dailyCounts[today] = { messages: savedData.session, chats: 0 };
             }
-            Logger.debug('Loaded user data', {
-                user: targetUser,
-                total: this.state.total,
-                totalChatsCreated: this.state.totalChatsCreated,
-                days: Object.keys(this.state.dailyCounts).length,
-            });
-        },
+        } else {
+            Object.assign(this.state, { total: 0, totalChatsCreated: 0, chats: {}, dailyCounts: {}, viewMode: 'today', isExpanded: false, resetStep: 0 });
+        }
+        Logger.debug('Loaded user data', {
+            user: targetUser,
+            total: this.state.total,
+            totalChatsCreated: this.state.totalChatsCreated,
+            days: Object.keys(this.state.dailyCounts).length
+        });
+    },
 
-        saveData() {
-            const user = Core.getCurrentUser();
-            if (!user || !user.includes('@')) return;
-            const storageKey = `gemini_store_${user}`;
-            storage.set(storageKey, {
+    saveData() {
+        const user = Core.getCurrentUser();
+        if (!user || !user.includes('@')) return;
+        const storageKey = `gemini_store_${user}`;
+        try {
+            GM_setValue(storageKey, {
                 total: this.state.total,
                 totalChatsCreated: this.state.totalChatsCreated,
                 chats: this.state.chats,
-                dailyCounts: this.state.dailyCounts,
+                dailyCounts: this.state.dailyCounts
             });
-        },
+        } catch (e) { /* silent */ }
+    },
 
-        // --- Counting Logic ---
-        ensureTodayEntry() {
-            const today = Core.getDayKey(this.resetHour);
-            if (!this.state.dailyCounts[today]) {
-                this.state.dailyCounts[today] = { messages: 0, chats: 0, byModel: { flash: 0, thinking: 0, pro: 0 } };
+    // --- Counting logic ---
+    ensureTodayEntry() {
+        const today = Core.getDayKey(this.resetHour);
+        return ensureTodayEntry(this.state.dailyCounts, today);
+    },
+
+    getTodayMessages() {
+        const today = Core.getDayKey(this.resetHour);
+        return this.state.dailyCounts[today]?.messages || 0;
+    },
+
+    getTodayByModel() {
+        const today = Core.getDayKey(this.resetHour);
+        return this.state.dailyCounts[today]?.byModel || { flash: 0, thinking: 0, pro: 0 };
+    },
+
+    getWeightedQuota() {
+        const bm = this.getTodayByModel();
+        return Object.keys(bm).reduce((sum, key) => {
+            const mult = this.MODEL_CONFIG[key]?.multiplier ?? 1;
+            return sum + (bm[key] * mult);
+        }, 0);
+    },
+
+    attemptIncrement() {
+        const now = Date.now();
+        if (now - this.lastCountTime < this.COOLDOWN) return;
+
+        const today = this.ensureTodayEntry();
+        this.state.total++;
+        this.state.dailyCounts[today].messages++;
+        const model = this.currentModel || 'flash';
+        if (this.state.dailyCounts[today].byModel) {
+            this.state.dailyCounts[today].byModel[model] = (this.state.dailyCounts[today].byModel[model] || 0) + 1;
+        }
+        this.lastCountTime = now;
+
+        const cid = Core.getChatId();
+
+        if (cid) {
+            if (!this.state.chats[cid]) {
+                this.state.totalChatsCreated++;
+                this.state.dailyCounts[today].chats++;
             }
-            if (!this.state.dailyCounts[today].byModel) {
+            this.state.chats[cid] = (this.state.chats[cid] || 0) + 1;
+            this.saveData();
+            PanelUI.update();
+        } else {
+            this.saveData();
+            PanelUI.update();
+            let attempts = 0;
+            const capturedDay = today; // pin day bucket at send time
+            if (this._cidPoller) clearInterval(this._cidPoller);
+            this._cidPoller = setInterval(() => {
+                attempts++;
+                const newCid = Core.getChatId();
+                if (newCid) {
+                    clearInterval(this._cidPoller);
+                    this._cidPoller = null;
+                    if (!this.state.chats[newCid]) {
+                        this.state.totalChatsCreated++;
+                        this.ensureTodayEntry(); // ensure structure exists
+                        if (this.state.dailyCounts[capturedDay]) {
+                            this.state.dailyCounts[capturedDay].chats++;
+                        }
+                    }
+                    this.state.chats[newCid] = (this.state.chats[newCid] || 0) + 1;
+                    this.saveData();
+                    PanelUI.update();
+                } else if (attempts >= 20) {
+                    clearInterval(this._cidPoller);
+                    this._cidPoller = null;
+                    this.saveData();
+                }
+            }, 500);
+        }
+    },
+
+    // --- Model detection ---
+    detectModel() {
+        try {
+            const modeBtn = document.querySelector('button.input-area-switch');
+            if (modeBtn) {
+                const text = modeBtn.textContent.trim();
+                const key = this.MODEL_DETECT_MAP[text];
+                if (key) return key;
+            }
+            const pillLabel = document.querySelector('[data-test-id="bard-mode-menu-button"]');
+            if (pillLabel) {
+                const full = pillLabel.textContent.trim();
+                const key = this.MODEL_DETECT_MAP[full] || this.MODEL_DETECT_MAP[full.split(/\s/)[0]];
+                if (key) return key;
+            }
+            const selected = document.querySelector('.bard-mode-list-button.is-selected');
+            if (selected) {
+                const full = selected.textContent.trim();
+                const key = this.MODEL_DETECT_MAP[full] || this.MODEL_DETECT_MAP[full.split(/\s/)[0]];
+                if (key) return key;
+            }
+        } catch (e) { }
+        return this.currentModel;
+    },
+
+    detectAccountType() {
+        try {
+            const pillboxBtn = document.querySelector('button.gds-pillbox-button, button.pillbox-btn');
+            if (pillboxBtn) {
+                const text = pillboxBtn.textContent.trim().toUpperCase();
+                if (text === 'ULTRA' || text.includes('ULTRA')) return 'ultra';
+                if (text === 'PRO' || text.includes('PRO')) return 'pro';
+            }
+            return 'free';
+        } catch (e) { }
+        return this.accountType;
+    },
+
+    // --- Statistics (delegating to lib pure functions) ---
+    calculateStreaks() {
+        return calculateStreaks(this.state.dailyCounts, this.resetHour);
+    },
+
+    getLast7DaysData() {
+        return getLast7DaysData(this.state.dailyCounts, this.resetHour);
+    },
+
+    // --- Reset logic ---
+    handleReset() {
+        const user = Core.getCurrentUser();
+        if (Core.getInspectingUser() !== user) return;
+
+        if (this.state.resetStep === 0) {
+            this.state.resetStep = 1;
+            PanelUI.update();
+            return;
+        }
+
+        if (this.state.viewMode === 'today') {
+            const today = Core.getDayKey(this.resetHour);
+            if (this.state.dailyCounts[today]) {
+                this.state.dailyCounts[today].messages = 0;
                 this.state.dailyCounts[today].byModel = { flash: 0, thinking: 0, pro: 0 };
             }
-            return today;
-        },
-
-        getTodayMessages() {
-            const today = Core.getDayKey(this.resetHour);
-            return this.state.dailyCounts[today]?.messages || 0;
-        },
-
-        getTodayByModel() {
-            const today = Core.getDayKey(this.resetHour);
-            return this.state.dailyCounts[today]?.byModel || { flash: 0, thinking: 0, pro: 0 };
-        },
-
-        getWeightedQuota() {
-            const bm = this.getTodayByModel();
-            return Object.keys(bm).reduce((sum, key) => {
-                const mult = MODEL_CONFIG[key]?.multiplier ?? 1;
-                return sum + (bm[key] * mult);
-            }, 0);
-        },
-
-        attemptIncrement() {
-            const now = Date.now();
-            if (now - this.lastCountTime < COOLDOWN) return;
-
-            const today = this.ensureTodayEntry();
-            this.state.total++;
-            this.state.dailyCounts[today].messages++;
-            const model = this.currentModel || 'flash';
-            if (this.state.dailyCounts[today].byModel) {
-                this.state.dailyCounts[today].byModel[model] = (this.state.dailyCounts[today].byModel[model] || 0) + 1;
-            }
-            this.lastCountTime = now;
-
+        } else if (this.state.viewMode === 'chat') {
             const cid = Core.getChatId();
-
-            if (cid) {
-                if (!this.state.chats[cid]) {
-                    this.state.totalChatsCreated++;
-                    this.state.dailyCounts[today].chats++;
-                }
-                this.state.chats[cid] = (this.state.chats[cid] || 0) + 1;
-                this.saveData();
-                getPanelUI().update();
-            } else {
-                this.saveData();
-                getPanelUI().update();
-                // Poll for new chat ID
-                let attempts = 0;
-                const poller = setInterval(() => {
-                    attempts++;
-                    const newCid = Core.getChatId();
-                    if (newCid) {
-                        clearInterval(poller);
-                        if (!this.state.chats[newCid]) {
-                            this.state.totalChatsCreated++;
-                            const todayKey = this.ensureTodayEntry();
-                            this.state.dailyCounts[todayKey].chats++;
-                        }
-                        this.state.chats[newCid] = (this.state.chats[newCid] || 0) + 1;
-                        this.saveData();
-                        getPanelUI().update();
-                    } else if (attempts >= 20) {
-                        clearInterval(poller);
-                        this.saveData();
-                    }
-                }, 500);
-            }
-        },
-
-        // --- Model Detection ---
-        detectModel() {
-            try {
-                const modeBtn = document.querySelector(SELECTORS.MODEL_BUTTON);
-                if (modeBtn) {
-                    const text = modeBtn.textContent.trim();
-                    const key = MODEL_DETECT_MAP[text];
-                    if (key) return key;
-                }
-                const pillLabel = document.querySelector(SELECTORS.MODEL_MENU_BUTTON);
-                if (pillLabel) {
-                    const text = pillLabel.textContent.trim().split(/\s/)[0];
-                    const key = MODEL_DETECT_MAP[text];
-                    if (key) return key;
-                }
-                const selected = document.querySelector(SELECTORS.MODEL_SELECTED);
-                if (selected) {
-                    const text = selected.textContent.trim().split(/\s/)[0];
-                    const key = MODEL_DETECT_MAP[text];
-                    if (key) return key;
-                }
-            } catch (e) { Logger.debug('detectModel failed', e); }
-            return this.currentModel;
-        },
-
-        detectAccountType() {
-            try {
-                const pillboxBtn = document.querySelector(SELECTORS.ACCOUNT_PILL);
-                if (pillboxBtn) {
-                    const text = pillboxBtn.textContent.trim().toUpperCase();
-                    if (text === 'ULTRA' || text.includes('ULTRA')) return 'ultra';
-                    if (text === 'PRO' || text.includes('PRO')) return 'pro';
-                }
-                return 'free';
-            } catch (e) { Logger.debug('detectAccountType failed', e); }
-            return this.accountType;
-        },
-
-        // --- Statistics ---
-        calculateStreaks() {
-            const dailyData = this.state.dailyCounts;
-            const dates = Object.keys(dailyData).sort();
-            if (dates.length === 0) return { current: 0, best: 0 };
-
-            let best = 0, temp = 0, lastDate = null;
-
-            for (const dateStr of dates) {
-                if (dailyData[dateStr].messages === 0) continue;
-                const d = new Date(dateStr);
-                d.setHours(0, 0, 0, 0);
-
-                if (lastDate) {
-                    const diff = (d - lastDate) / (1000 * 60 * 60 * 24);
-                    if (diff === 1) temp++;
-                    else if (diff > 1) temp = 1;
-                } else {
-                    temp = 1;
-                }
-                if (temp > best) best = temp;
-                lastDate = d;
-            }
-
-            // Current streak
-            const todayStr = Core.getDayKey(this.resetHour);
-            const todayDate = new Date();
-            if (todayDate.getHours() < this.resetHour) todayDate.setDate(todayDate.getDate() - 1);
-            todayDate.setDate(todayDate.getDate() - 1);
-            const yesterdayStr = todayDate.toISOString().slice(0, 10);
-
-            let checkDate = (dailyData[todayStr]?.messages > 0) ? new Date(todayStr) : new Date(yesterdayStr);
-            let current = 0;
-
-            const MAX_STREAK = 3650; // 10 years safety cap
-            let safetyCount = 0;
-            while (safetyCount++ < MAX_STREAK) {
-                const key = checkDate.toISOString().slice(0, 10);
-                if (dailyData[key] && dailyData[key].messages > 0) {
-                    current++;
-                    checkDate.setDate(checkDate.getDate() - 1);
-                } else {
-                    break;
-                }
-            }
-
-            return { current, best };
-        },
-
-        getLast7DaysData() {
-            const result = [];
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
-                const key = d.toISOString().slice(0, 10);
-                result.push({
-                    date: key,
-                    label: `${d.getMonth() + 1}/${d.getDate()}`,
-                    messages: this.state.dailyCounts[key]?.messages || 0,
-                });
-            }
-            return result;
-        },
-
-        // --- Reset Logic ---
-        handleReset() {
-            const user = Core.getCurrentUser();
-            if (Core.getInspectingUser() !== user) return;
-
-            if (this.state.resetStep === 0) {
-                this.state.resetStep = 1;
-                getPanelUI().update();
+            if (cid) this.state.chats[cid] = 0;
+        } else if (this.state.viewMode === 'total') {
+            if (this.state.resetStep === 1) {
+                this.state.resetStep = 2;
+                PanelUI.update();
                 return;
             }
+            this.state.total = 0;
+            this.state.chats = {};
+            this.state.dailyCounts = {};
+            this.state.totalChatsCreated = 0;
+        }
 
-            if (this.state.viewMode === 'today') {
-                const today = Core.getDayKey(this.resetHour);
-                if (this.state.dailyCounts[today]) {
-                    this.state.dailyCounts[today].messages = 0;
-                    this.state.dailyCounts[today].byModel = { flash: 0, thinking: 0, pro: 0 };
-                }
-            } else if (this.state.viewMode === 'chat') {
-                const cid = Core.getChatId();
-                if (cid) this.state.chats[cid] = 0;
-            } else if (this.state.viewMode === 'total') {
-                if (this.state.resetStep === 1) {
-                    this.state.resetStep = 2;
-                    getPanelUI().update();
-                    return;
-                }
-                this.state.total = 0;
-                this.state.chats = {};
-                this.state.dailyCounts = {};
-                this.state.totalChatsCreated = 0;
-            }
-
-            this.state.resetStep = 0;
-            this.saveData();
-            getPanelUI().update();
-        },
-    };
-}
+        this.state.resetStep = 0;
+        this.saveData();
+        PanelUI.update();
+    }
+};

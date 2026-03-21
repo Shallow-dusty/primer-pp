@@ -1,20 +1,21 @@
-// src/platforms/extension/content.js — Browser extension content script entry
+/**
+ * Extension content script — single-file entry.
+ * Initializes GM_* polyfill (async), then runs main app.
+ * esbuild bundles everything into one IIFE.
+ */
 
-import { createExtensionStorage } from '../../core/storage.js';
-import { createApp } from '../../shared/app.js';
-import { createLogger, filterLogs } from '../../../lib/debug_logger.cjs';
-import '../../styles/panel.css';  // side-effect import → extracted to styles.css by rollup
+import {
+    __initGMPolyfill,
+    GM_getValue, GM_setValue, GM_listValues,
+    GM_addValueChangeListener, GM_removeValueChangeListener,
+    GM_addStyle, GM_registerMenuCommand
+} from './gm_polyfill.js';
 
-(async () => {
-    const storage = createExtensionStorage();
-    await storage.init();
-
-    const app = createApp(storage, {
-        createLogger,
-        filterLogs,
-        panelCSS: null,   // CSS loaded via manifest.json content_scripts.css
-        gmAddStyle: null,
-    });
-
-    app.start();
-})();
+globalThis.__initGMPolyfill = __initGMPolyfill;
+globalThis.GM_getValue = GM_getValue;
+globalThis.GM_setValue = GM_setValue;
+globalThis.GM_listValues = GM_listValues;
+globalThis.GM_addValueChangeListener = GM_addValueChangeListener;
+globalThis.GM_removeValueChangeListener = GM_removeValueChangeListener;
+globalThis.GM_addStyle = GM_addStyle;
+globalThis.GM_registerMenuCommand = GM_registerMenuCommand;

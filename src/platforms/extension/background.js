@@ -1,5 +1,3 @@
-// src/platforms/extension/background.js — Extension service worker (context menus)
-
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: 'gemini-reset-position',
@@ -11,12 +9,7 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info) => {
     if (info.menuItemId === 'gemini-reset-position') {
         chrome.storage.local.set({
-            gemini_panel_pos: {
-                top: 'auto',
-                left: 'auto',
-                bottom: '20px',
-                right: '20px',
-            },
+            gemini_panel_pos: { top: '20px', left: 'auto', bottom: 'auto', right: '220px' },
         });
     }
 });

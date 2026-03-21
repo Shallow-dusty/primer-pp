@@ -1,5 +1,5 @@
 {
-  "include": ["lib/**/*.cjs", "lib/storage.cjs", "lib/module-registry.cjs"],
+  "include": ["lib/**/*.js"],
   "exclude": ["**/*.test.js"],
   "all": true
 }

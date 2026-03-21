@@ -1,0 +1,275 @@
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║              Gemini Primer++ v10.17 — Entry Point                        ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+import { TIMINGS, GLOBAL_KEYS, PANEL_ID, DEFAULT_POS, TEMP_USER } from './constants.js';
+import { Logger } from './logger.js';
+import { Core } from './core.js';
+import {
+    getCurrentUser, setCurrentUser,
+    getInspectingUser, setInspectingUser
+} from './state.js';
+import { ModuleRegistry } from './module_registry.js';
+import { NativeUI } from './native_ui.js';
+import { DOMWatcher } from './dom_watcher.js';
+import { PanelUI } from './panel_ui.js';
+import { GuidedTour } from './guided_tour.js';
+import {
+    debugShowDetectedUser,
+    debugDumpStorageKeys,
+    debugDumpGeminiStores,
+    debugExportLegacyData,
+    debugExportAllStorage,
+    debugExportLogs
+} from './debug_utils.js';
+
+// --- Module imports (explicit registration in main.js to avoid circular dep issues) ---
+import { CounterModule } from './modules/counter.js';
+import { ExportModule } from './modules/export.js';
+import { FoldersModule } from './modules/folders.js';
+import { PromptVaultModule } from './modules/prompt_vault.js';
+import { DefaultModelModule } from './modules/default_model.js';
+import { BatchDeleteModule } from './modules/batch_delete.js';
+import { QuoteReplyModule } from './modules/quote_reply.js';
+import { UITweaksModule } from './modules/ui_tweaks.js';
+
+// Register all modules explicitly (after all imports are resolved)
+ModuleRegistry.register(CounterModule);
+ModuleRegistry.register(ExportModule);
+ModuleRegistry.register(FoldersModule);
+ModuleRegistry.register(PromptVaultModule);
+ModuleRegistry.register(DefaultModelModule);
+ModuleRegistry.register(BatchDeleteModule);
+ModuleRegistry.register(QuoteReplyModule);
+ModuleRegistry.register(UITweaksModule);
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║                           MAIN LOOP (主循环)                             ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+let lastDetectedUser = null;
+
+// --- Lazy path: user detection + account type (slow poll, 5s) ---
+function lazyDetect() {
+  try {
+    const detected = Core.detectUser();
+    if (detected !== lastDetectedUser) {
+        Logger.debug('User detection changed', { detected });
+        lastDetectedUser = detected;
+    }
+    if (detected && detected !== getCurrentUser()) {
+        // Guest data merge strategy
+        let guestState = null;
+        if (getCurrentUser() === TEMP_USER && ModuleRegistry.isEnabled('counter')) {
+            try {
+                guestState = JSON.parse(JSON.stringify(CounterModule.state));
+            } catch (e) {
+                guestState = null;
+            }
+        }
+
+        setCurrentUser(detected);
+        Core.registerUser(detected);
+        Logger.info('User switched', { currentUser: detected });
+
+        if (getInspectingUser() === TEMP_USER || getInspectingUser() === getCurrentUser()) {
+            setInspectingUser(getCurrentUser());
+        }
+
+        // Merge Guest data BEFORE notifying modules (so they see complete state)
+        if (guestState && (guestState.total > 0 || Object.keys(guestState.chats).length > 0)) {
+            const cm = CounterModule;
+            cm.state.total += (typeof guestState.total === 'number' ? guestState.total : 0);
+            cm.state.totalChatsCreated += (typeof guestState.totalChatsCreated === 'number' ? guestState.totalChatsCreated : 0);
+            for (const [day, counts] of Object.entries(guestState.dailyCounts || {})) {
+                if (typeof counts !== 'object' || !counts) continue;
+                if (!cm.state.dailyCounts[day]) {
+                    cm.state.dailyCounts[day] = counts;
+                } else {
+                    cm.state.dailyCounts[day].messages += (typeof counts.messages === 'number' ? counts.messages : 0);
+                    cm.state.dailyCounts[day].chats += (typeof counts.chats === 'number' ? counts.chats : 0);
+                    if (counts.byModel && typeof counts.byModel === 'object') {
+                        if (!cm.state.dailyCounts[day].byModel) {
+                            cm.state.dailyCounts[day].byModel = { flash: 0, thinking: 0, pro: 0 };
+                        }
+                        cm.state.dailyCounts[day].byModel.flash += (typeof counts.byModel.flash === 'number' ? counts.byModel.flash : 0);
+                        cm.state.dailyCounts[day].byModel.thinking += (typeof counts.byModel.thinking === 'number' ? counts.byModel.thinking : 0);
+                        cm.state.dailyCounts[day].byModel.pro += (typeof counts.byModel.pro === 'number' ? counts.byModel.pro : 0);
+                    }
+                }
+            }
+            for (const [cid, count] of Object.entries(guestState.chats || {})) {
+                cm.state.chats[cid] = (cm.state.chats[cid] || 0) + (typeof count === 'number' ? count : 0);
+            }
+            Logger.info(`Merged ${guestState.total} messages from Guest session to ${getCurrentUser()}`);
+            cm.saveData();
+        }
+
+        // Notify all modules (after merge, so they see complete state)
+        ModuleRegistry.notifyUserChange(getInspectingUser());
+    }
+
+    // Also detect account type on lazy poll
+    if (ModuleRegistry.isEnabled('counter')) {
+        const cm = CounterModule;
+        const newAcct = cm.detectAccountType();
+        if (newAcct !== cm.accountType) {
+            cm.accountType = newAcct;
+            if (document.getElementById(PANEL_ID)) PanelUI.update();
+        }
+    }
+  } catch (e) {
+    Logger.error('lazyDetect error', e);
+  }
+}
+
+// --- Reactive path: model mutation (DOMWatcher, debounce 500ms) ---
+function onModelMutation() {
+    if (!ModuleRegistry.isEnabled('counter')) return;
+    const cm = CounterModule;
+    const newModel = cm.detectModel();
+    if (newModel !== cm.currentModel) {
+        cm.currentModel = newModel;
+        if (document.getElementById(PANEL_ID)) PanelUI.update();
+    }
+}
+
+// --- Reactive path: DOM structure change (DOMWatcher, debounce 1500ms) ---
+function onDOMStructureChange() {
+    if (ModuleRegistry.isEnabled('counter') && !document.getElementById(PANEL_ID)) {
+        PanelUI.create();
+    }
+    NativeUI.markAllDirty();
+    NativeUI.tick();
+}
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║                           INITIALIZATION                                ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+PanelUI.injectStyles();
+ModuleRegistry.init();
+DOMWatcher.init();
+
+// Initialize auto theme listener if current theme is 'auto'
+Core._updateAutoListener(Core.getTheme());
+
+// Register DOMWatcher reactive handlers
+DOMWatcher.register('model-mutation', {
+    match: (m) => {
+        if (m.type === 'attributes') {
+            const target = m.target;
+            if (!target || !target.matches) return false;
+            return target.matches('button.input-area-switch, [data-test-id="bard-mode-menu-button"], .bard-mode-list-button');
+        }
+        if (m.type === 'childList' && m.target?.closest) {
+            return !!m.target.closest('input-area-v2, .input-area-container, .bottom-container');
+        }
+        return false;
+    },
+    callback: onModelMutation,
+    debounce: TIMINGS.MODEL_MUTATION_DEBOUNCE
+});
+
+DOMWatcher.register('dom-structure', {
+    match: (m) => m.type === 'childList',
+    callback: onDOMStructureChange,
+    debounce: TIMINGS.NATIVEUI_DEBOUNCE
+});
+
+// Onboarding queue: show module guides for newly-enabled modules
+function startOnboardingQueue() {
+    let seen;
+    try { seen = GM_getValue(GLOBAL_KEYS.ONBOARDING, {}); } catch (e) { seen = {}; }
+    const queue = [];
+    ModuleRegistry.enabledModules.forEach(id => {
+        const mod = ModuleRegistry.modules[id];
+        if (!seen[id] && typeof mod?.getOnboarding === 'function') {
+            queue.push(id);
+            seen[id] = true;
+        }
+    });
+    if (queue.length === 0) return;
+    try { GM_setValue(GLOBAL_KEYS.ONBOARDING, seen); } catch (e) { /* silent */ }
+    let i = 0;
+    function showNext() {
+        if (i >= queue.length) return;
+        const id = queue[i++];
+        PanelUI.showOnboarding(id);
+        let check = null;
+        let timeout = null;
+        const cleanup = () => {
+            if (check) clearInterval(check);
+            if (timeout) clearTimeout(timeout);
+        };
+        check = setInterval(() => {
+            if (!document.querySelector('.gc-onboarding-overlay')) {
+                cleanup();
+                setTimeout(showNext, 500);
+            }
+        }, 300);
+        timeout = setTimeout(cleanup, 10000);
+    }
+    setTimeout(showNext, 500);
+}
+
+// Guided Tour first, then onboarding queue (progressive disclosure)
+if (!GuidedTour.hasSeen()) {
+    setTimeout(() => GuidedTour.start(startOnboardingQueue), 2500);
+} else {
+    startOnboardingQueue();
+}
+
+// Initial calls
+lazyDetect();
+onDOMStructureChange();
+
+let pollTimer = setInterval(lazyDetect, TIMINGS.SLOW_POLL);
+
+// Visibility change: pause/resume polling + auto-sync
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        if (!pollTimer) pollTimer = setInterval(lazyDetect, TIMINGS.SLOW_POLL);
+        lazyDetect();
+        onModelMutation();
+        const user = getInspectingUser();
+        if (user && user !== TEMP_USER && ModuleRegistry.isEnabled('counter')) {
+            CounterModule.loadDataForUser(user);
+        }
+    } else {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    }
+});
+
+// ╔══════════════════════════════════════════════════════════════════════════╗
+// ║                      TAMPERMONKEY MENU COMMANDS                          ║
+// ╚══════════════════════════════════════════════════════════════════════════╝
+
+GM_registerMenuCommand("\u{1F9F0} Debug: Show Detected User", () => {
+    debugShowDetectedUser();
+});
+
+GM_registerMenuCommand("\u{1F9F0} Debug: Dump Storage Keys", () => {
+    debugDumpStorageKeys();
+});
+
+GM_registerMenuCommand("\u{1F9F0} Debug: Export All Storage", () => {
+    debugExportAllStorage();
+});
+
+GM_registerMenuCommand("\u{1F9F0} Debug: Export Legacy Data", () => {
+    debugExportLegacyData();
+});
+
+GM_registerMenuCommand("\u{1F9F0} Debug: Export Logs", () => {
+    debugExportLogs();
+});
+
+GM_registerMenuCommand("\u{1F9F0} Debug: Dump Gemini Storage", () => {
+    debugDumpGeminiStores();
+});
+
+GM_registerMenuCommand("\u{1F504} Reset Position", () => {
+    GM_setValue(GLOBAL_KEYS.POS, DEFAULT_POS);
+    location.reload();
+});

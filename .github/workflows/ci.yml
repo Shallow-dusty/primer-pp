@@ -35,7 +35,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: userscript
-          path: dist/gemini-ultra-toolkit.user.js
+          path: GeminiPrimerPP.user.js
       - uses: actions/upload-artifact@v4
         with:
           name: extension

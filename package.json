@@ -1,26 +1,16 @@
 {
-  "name": "gemini-ultra-toolkit",
-  "version": "9.0.0",
+  "name": "gemini-primer-pp",
   "private": true,
-  "type": "module",
-  "description": "Modular Gemini assistant platform — userscript & browser extension",
-  "author": "Script Weaver",
-  "license": "MIT",
+  "type": "commonjs",
   "scripts": {
-    "build": "rollup -c",
-    "build:userscript": "rollup -c --environment TARGET:userscript",
-    "build:extension": "rollup -c --environment TARGET:extension",
-    "dev": "rollup -c -w",
+    "build": "node scripts/build.js",
+    "build:userscript": "node -e \"process.env.TARGET='userscript';require('./scripts/build.js')\"",
+    "build:extension": "node -e \"process.env.TARGET='extension';require('./scripts/build.js')\"",
+    "pretest": "npm run build:userscript",
     "test": "c8 --100 --check-coverage --branches 100 --functions 100 --lines 100 --statements 100 node --test"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^25.0.0",
-    "@rollup/plugin-node-resolve": "^15.2.0",
-    "@rollup/plugin-replace": "^6.0.3",
-    "@rollup/plugin-terser": "^0.4.0",
-    "c8": "^9.1.0",
-    "rollup": "^4.9.0",
-    "rollup-plugin-copy": "^3.5.0",
-    "rollup-plugin-import-css": "^3.5.0"
+    "c8": "^11.0.0",
+    "esbuild": "^0.27.3"
   }
 }
