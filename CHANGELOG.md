@@ -1,4 +1,6 @@
-# 📜 Gemini Counter Pro - Changelog
+# Primer++ for Gemini — Changelog
+
+> Formerly known as "Gemini Counter Pro" (v1–v8) → "Gemini Primer++" (v9–v10.17) → "Primer++ for Gemini" (v10.17+)
 
 ### 📦 v9.x Series: Native UI Integration (原生界面集成)
 
