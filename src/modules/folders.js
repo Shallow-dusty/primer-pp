@@ -54,6 +54,7 @@ export const FoldersModule = {
         // 清理注入的样式
         if (this._styleEl) { this._styleEl.remove(); this._styleEl = null; }
         if (this._initTimeout) { clearTimeout(this._initTimeout); this._initTimeout = null; }
+        if (this._searchDebounce) { clearTimeout(this._searchDebounce); this._searchDebounce = null; }
 
         DOMWatcher.unregister('folders-sidebar');
         // 清理拖拽状态
@@ -808,7 +809,8 @@ export const FoldersModule = {
         searchInput.value = this._searchQuery || '';
         searchInput.oninput = (e) => {
             this._searchQuery = e.target.value;
-            PanelUI.renderDetailsPane();
+            if (this._searchDebounce) clearTimeout(this._searchDebounce);
+            this._searchDebounce = setTimeout(() => PanelUI.renderDetailsPane(), 150);
         };
         searchWrap.appendChild(searchInput);
         container.appendChild(searchWrap);
