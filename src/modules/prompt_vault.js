@@ -93,9 +93,10 @@ export const PromptVaultModule = {
             empty.textContent = '\u8FD8\u6CA1\u6709\u4FDD\u5B58\u7684\u63D0\u793A\u8BCD';
             menu.appendChild(empty);
         } else {
-            // Group by category, show max 8
+            // Sort by usage frequency (most used first), then group by category
+            const sorted = [...this._prompts].sort((a, b) => (b.usedCount || 0) - (a.usedCount || 0));
             const categories = {};
-            this._prompts.forEach(p => {
+            sorted.forEach(p => {
                 const cat = p.category || 'General';
                 if (!categories[cat]) categories[cat] = [];
                 categories[cat].push(p);
