@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // .filePath // empty'); if echo \"$file\" | grep -qE '(primer-pp\\.user\\.js|/dist/)'; then echo 'BLOCK: 这是构建产物，请编辑 src/ 或 lib/ 下的源码。' >&2; exit 2; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // .filePath // empty'); if echo \"$file\" | grep -qE '/lib/.*\\.js$'; then cd /home/shallow/04.AI-Prism/05.Gemini-Ultra-Toolkit && npm test 2>&1 | tail -8; fi",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  }
+}
