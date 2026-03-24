@@ -134,7 +134,30 @@ function onModelMutation() {
     }
 }
 
-// --- Reactive path: DOM structure change (DOMWatcher, debounce 1500ms) ---
+// --- Reactive path: zone-based DOM structure changes (DOMWatcher) ---
+function onSidebarChange() {
+    Core.invalidateSidebarCache();
+    NativeUI.markDirtyByZone('sidebar');
+    NativeUI.tick();
+}
+
+function onInputAreaChange() {
+    NativeUI.markDirtyByZone('input');
+    NativeUI.tick();
+}
+
+function onHeaderChange() {
+    NativeUI.markDirtyByZone('header');
+    NativeUI.tick();
+}
+
+function onPanelRemoved() {
+    if (ModuleRegistry.isEnabled('counter') && !document.getElementById(PANEL_ID)) {
+        PanelUI.create();
+    }
+}
+
+// Full re-injection (used only at initialization)
 function onDOMStructureChange() {
     Core.invalidateSidebarCache();
     if (ModuleRegistry.isEnabled('counter') && !document.getElementById(PANEL_ID)) {
@@ -175,10 +198,30 @@ DOMWatcher.register('model-mutation', {
     debounce: TIMINGS.MODEL_MUTATION_DEBOUNCE
 });
 
-DOMWatcher.register('dom-structure', {
-    match: (m) => m.type === 'childList',
-    callback: onDOMStructureChange,
+// Zone-based structure watchers (replaces single broad dom-structure handler)
+DOMWatcher.register('sidebar-structure', {
+    match: (m) => m.type === 'childList' && !!m.target?.closest?.('.sidenav-with-history-container, bard-sidenav, nav[role="navigation"]'),
+    callback: onSidebarChange,
     debounce: TIMINGS.NATIVEUI_DEBOUNCE
+});
+DOMWatcher.register('input-structure', {
+    match: (m) => m.type === 'childList' && !!m.target?.closest?.('input-area-v2, .input-area-container, .bottom-container'),
+    callback: onInputAreaChange,
+    debounce: TIMINGS.NATIVEUI_DEBOUNCE
+});
+DOMWatcher.register('header-structure', {
+    match: (m) => m.type === 'childList' && !!m.target?.closest?.('.conversation-title-container'),
+    callback: onHeaderChange,
+    debounce: TIMINGS.NATIVEUI_DEBOUNCE
+});
+DOMWatcher.register('panel-guard', {
+    match: (m) => {
+        if (m.type !== 'childList' || !m.removedNodes?.length) return false;
+        for (const n of m.removedNodes) { if (n.id === PANEL_ID) return true; }
+        return false;
+    },
+    callback: onPanelRemoved,
+    debounce: 500
 });
 
 // Onboarding queue: show module guides for newly-enabled modules

@@ -35,11 +35,30 @@ export const NativeUI = {
     _dirtyModules: new Set(),
     _retryCount: {},
 
+    // Zone → module IDs: which modules inject into which DOM zones
+    _zoneModules: {
+        sidebar: ['folders', 'batch-delete'],
+        input:   ['prompt-vault', 'ui-tweaks', 'default-model'],
+        header:  ['export'],
+    },
+
     markAllDirty() {
         ModuleRegistry.enabledModules.forEach(id => {
             this._dirtyModules.add(id);
             delete this._retryCount[id];
         });
+    },
+
+    /** Mark only modules that inject into a specific DOM zone */
+    markDirtyByZone(zone) {
+        const ids = this._zoneModules[zone];
+        if (!ids) return this.markAllDirty();
+        for (const id of ids) {
+            if (ModuleRegistry.isEnabled(id)) {
+                this._dirtyModules.add(id);
+                delete this._retryCount[id];
+            }
+        }
     },
 
     markDirty(id) {
