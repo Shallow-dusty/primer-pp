@@ -154,7 +154,8 @@ export const PanelUI = {
             .gemini-details-view {
                 height: 0; opacity: 0; overflow: hidden; background: var(--detail-bg, rgba(0,0,0,0.1));
                 padding: 0 12px;
-                transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                            padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
             .gemini-details-view.expanded { height: auto; opacity: 1; padding: 10px 12px 14px 12px; border-top: 1px solid var(--border); max-height: 420px; overflow-y: auto; }
             .section-title {

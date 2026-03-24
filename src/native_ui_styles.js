@@ -25,9 +25,9 @@ export function injectNativeUIStyles() {
             flex-shrink: 0;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
-            height: auto;
             max-height: 36px;
             align-self: start;
+            animation: gcFadeIn 0.2s ease-out;
         }
         .gc-filter-bar::-webkit-scrollbar { display: none; }
 
@@ -42,7 +42,9 @@ export function injectNativeUIStyles() {
             background: transparent;
             color: #9aa0a6;
             font-weight: 400;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             line-height: 1.4;
             user-select: none;
             opacity: 0.7;
@@ -59,9 +61,9 @@ export function injectNativeUIStyles() {
 
         .gc-sidebar-toolbar {
             padding: 4px 12px;
-            height: auto;
             max-height: 40px;
             align-self: start;
+            animation: gcFadeIn 0.2s ease-out;
         }
 
         .gc-sidebar-btn {
@@ -73,7 +75,9 @@ export function injectNativeUIStyles() {
             font-size: 12px;
             font-family: 'Google Sans', Roboto, sans-serif;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
             opacity: 0.6;
         }
@@ -289,6 +293,12 @@ export function injectNativeUIStyles() {
         .gc-toast.visible {
             opacity: 1;
             transform: translateX(-50%) translateY(0);
+        }
+
+        /* Shared entrance animation for native UI injections */
+        @keyframes gcFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
         }
     `);
 }
