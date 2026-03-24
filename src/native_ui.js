@@ -154,10 +154,13 @@ export const NativeUI = {
         confirmBtn.focus();
     },
 
-    // Called from onDOMStructureChange — only processes dirty modules
+    // Called from zone handlers — only processes dirty modules
+    _retryTimer: null,
+
     tick() {
         if (this._dirtyModules.size === 0) return;
 
+        let needsRetry = false;
         const toProcess = [...this._dirtyModules];
         for (const id of toProcess) {
             const mod = ModuleRegistry.modules[id];
@@ -167,15 +170,28 @@ export const NativeUI = {
                     this._dirtyModules.delete(id);
                     delete this._retryCount[id];
                 } catch (e) {
-                    this._retryCount[id] = (this._retryCount[id] || 0) + 1;
-                    if (this._retryCount[id] >= 3) {
+                    const count = (this._retryCount[id] || 0) + 1;
+                    this._retryCount[id] = count;
+                    if (count >= 5) {
                         this._dirtyModules.delete(id);
                         delete this._retryCount[id];
+                    } else {
+                        needsRetry = true;
                     }
                 }
             } else {
                 this._dirtyModules.delete(id);
             }
+        }
+
+        // Schedule exponential backoff retry for remaining dirty modules
+        if (needsRetry && !this._retryTimer) {
+            const maxCount = Math.max(...Object.values(this._retryCount), 1);
+            const delay = 500 * Math.pow(2, maxCount - 1);
+            this._retryTimer = setTimeout(() => {
+                this._retryTimer = null;
+                this.tick();
+            }, delay);
         }
     }
 };
