@@ -267,9 +267,23 @@ if (!GuidedTour.hasSeen()) {
     startOnboardingQueue();
 }
 
+// Wait for Gemini's core UI to be present before first injection
+function waitForGeminiReady(cb, maxWait = 10000) {
+    const start = Date.now();
+    (function check() {
+        const ready = !!(
+            document.querySelector('.sidenav-with-history-container, bard-sidenav, nav[role="navigation"]') ||
+            document.querySelector('input-area-v2, .input-area-container, .bottom-container')
+        );
+        if (ready) cb();
+        else if (Date.now() - start < maxWait) requestAnimationFrame(check);
+        else cb();
+    })();
+}
+
 // Initial calls
 lazyDetect();
-onDOMStructureChange();
+waitForGeminiReady(() => onDOMStructureChange());
 
 let pollTimer = setInterval(lazyDetect, TIMINGS.SLOW_POLL);
 
