@@ -42,6 +42,7 @@ export const Core = {
     // --- Theme management ---
     _autoThemeQuery: null,
     _autoThemeHandler: null,
+    _appliedRootTheme: null,
 
     /** Resolve 'auto' to a concrete theme key based on system preference */
     resolveTheme(key) {
@@ -69,8 +70,13 @@ export const Core = {
         const vars = THEMES[resolved].vars;
         for (const [key, val] of Object.entries(vars)) {
             el.style.setProperty(key, val);
-            // Also set on :root so native UI injections outside the panel inherit theme vars
-            document.documentElement.style.setProperty(key, val);
+        }
+        // Set on :root only when theme actually changes (avoids redundant 20+ writes)
+        if (this._appliedRootTheme !== resolved) {
+            for (const [key, val] of Object.entries(vars)) {
+                document.documentElement.style.setProperty(key, val);
+            }
+            this._appliedRootTheme = resolved;
         }
     },
 
