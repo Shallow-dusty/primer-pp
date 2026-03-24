@@ -68,6 +68,11 @@ export const CounterModule = {
             clearInterval(this._cidPoller);
             this._cidPoller = null;
         }
+        if (this._saveTimer) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+            this.saveData();
+        }
         Core.setupStorageListener(null, null);
         Logger.info('CounterModule destroyed');
     },
@@ -164,6 +169,8 @@ export const CounterModule = {
         });
     },
 
+    _saveTimer: null,
+
     saveData() {
         const user = Core.getCurrentUser();
         if (!user || !user.includes('@')) return;
@@ -176,6 +183,15 @@ export const CounterModule = {
                 dailyCounts: this.state.dailyCounts
             });
         } catch (e) { /* silent */ }
+    },
+
+    /** Debounced save — coalesces multiple rapid state changes into one GM_setValue */
+    _debouncedSave() {
+        if (this._saveTimer) return;
+        this._saveTimer = setTimeout(() => {
+            this._saveTimer = null;
+            this.saveData();
+        }, 300);
     },
 
     // --- Counting logic ---
@@ -223,10 +239,10 @@ export const CounterModule = {
                 this.state.dailyCounts[today].chats++;
             }
             this.state.chats[cid] = (this.state.chats[cid] || 0) + 1;
-            this.saveData();
+            this._debouncedSave();
             PanelUI.update();
         } else {
-            this.saveData();
+            this._debouncedSave();
             PanelUI.update();
             let attempts = 0;
             const capturedDay = today; // pin day bucket at send time
@@ -245,12 +261,12 @@ export const CounterModule = {
                         }
                     }
                     this.state.chats[newCid] = (this.state.chats[newCid] || 0) + 1;
-                    this.saveData();
+                    this._debouncedSave();
                     PanelUI.update();
                 } else if (attempts >= 20) {
                     clearInterval(this._cidPoller);
                     this._cidPoller = null;
-                    this.saveData();
+                    this._debouncedSave();
                 }
             }, 500);
         }
