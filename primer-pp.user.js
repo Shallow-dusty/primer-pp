@@ -409,6 +409,7 @@
         // --- Theme management ---
         _autoThemeQuery: null,
         _autoThemeHandler: null,
+        _appliedRootTheme: null,
         /** Resolve 'auto' to a concrete theme key based on system preference */
         resolveTheme(key) {
           if (key !== "auto") return key;
@@ -441,7 +442,12 @@
           const vars = THEMES[resolved].vars;
           for (const [key, val] of Object.entries(vars)) {
             el.style.setProperty(key, val);
-            document.documentElement.style.setProperty(key, val);
+          }
+          if (this._appliedRootTheme !== resolved) {
+            for (const [key, val] of Object.entries(vars)) {
+              document.documentElement.style.setProperty(key, val);
+            }
+            this._appliedRootTheme = resolved;
           }
         },
         /** Start/stop matchMedia listener for auto theme */
@@ -580,11 +586,28 @@
         // Dirty tracking: only re-inject modules when DOM structure changes
         _dirtyModules: /* @__PURE__ */ new Set(),
         _retryCount: {},
+        // Zone → module IDs: which modules inject into which DOM zones
+        _zoneModules: {
+          sidebar: ["folders", "batch-delete"],
+          input: ["prompt-vault", "ui-tweaks", "default-model"],
+          header: ["export"]
+        },
         markAllDirty() {
           ModuleRegistry.enabledModules.forEach((id) => {
             this._dirtyModules.add(id);
             delete this._retryCount[id];
           });
+        },
+        /** Mark only modules that inject into a specific DOM zone */
+        markDirtyByZone(zone) {
+          const ids = this._zoneModules[zone];
+          if (!ids) return this.markAllDirty();
+          for (const id of ids) {
+            if (ModuleRegistry.isEnabled(id)) {
+              this._dirtyModules.add(id);
+              delete this._retryCount[id];
+            }
+          }
         },
         markDirty(id) {
           this._dirtyModules.add(id);
@@ -673,9 +696,11 @@
           document.body.appendChild(overlay);
           confirmBtn.focus();
         },
-        // Called from onDOMStructureChange — only processes dirty modules
+        // Called from zone handlers — only processes dirty modules
+        _retryTimer: null,
         tick() {
           if (this._dirtyModules.size === 0) return;
+          let needsRetry = false;
           const toProcess = [...this._dirtyModules];
           for (const id of toProcess) {
             const mod = ModuleRegistry.modules[id];
@@ -685,15 +710,26 @@
                 this._dirtyModules.delete(id);
                 delete this._retryCount[id];
               } catch (e) {
-                this._retryCount[id] = (this._retryCount[id] || 0) + 1;
-                if (this._retryCount[id] >= 3) {
+                const count = (this._retryCount[id] || 0) + 1;
+                this._retryCount[id] = count;
+                if (count >= 5) {
                   this._dirtyModules.delete(id);
                   delete this._retryCount[id];
+                } else {
+                  needsRetry = true;
                 }
               }
             } else {
               this._dirtyModules.delete(id);
             }
+          }
+          if (needsRetry && !this._retryTimer) {
+            const maxCount = Math.max(...Object.values(this._retryCount), 1);
+            const delay = 500 * Math.pow(2, maxCount - 1);
+            this._retryTimer = setTimeout(() => {
+              this._retryTimer = null;
+              this.tick();
+            }, delay);
           }
         }
       };
@@ -1035,6 +1071,11 @@
             clearInterval(this._cidPoller);
             this._cidPoller = null;
           }
+          if (this._saveTimer) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+            this.saveData();
+          }
           Core.setupStorageListener(null, null);
           Logger.info("CounterModule destroyed");
         },
@@ -1123,6 +1164,7 @@
             days: Object.keys(this.state.dailyCounts).length
           });
         },
+        _saveTimer: null,
         saveData() {
           const user = Core.getCurrentUser();
           if (!user || !user.includes("@")) return;
@@ -1136,6 +1178,14 @@
             });
           } catch (e) {
           }
+        },
+        /** Debounced save — coalesces multiple rapid state changes into one GM_setValue */
+        _debouncedSave() {
+          if (this._saveTimer) return;
+          this._saveTimer = setTimeout(() => {
+            this._saveTimer = null;
+            this.saveData();
+          }, 300);
         },
         // --- Counting logic ---
         ensureTodayEntry() {
@@ -1175,10 +1225,10 @@
               this.state.dailyCounts[today].chats++;
             }
             this.state.chats[cid] = (this.state.chats[cid] || 0) + 1;
-            this.saveData();
+            this._debouncedSave();
             PanelUI.update();
           } else {
-            this.saveData();
+            this._debouncedSave();
             PanelUI.update();
             let attempts = 0;
             const capturedDay = today;
@@ -1197,12 +1247,12 @@
                   }
                 }
                 this.state.chats[newCid] = (this.state.chats[newCid] || 0) + 1;
-                this.saveData();
+                this._debouncedSave();
                 PanelUI.update();
               } else if (attempts >= 20) {
                 clearInterval(this._cidPoller);
                 this._cidPoller = null;
-                this.saveData();
+                this._debouncedSave();
               }
             }, 500);
           }
@@ -3075,7 +3125,8 @@
             .gemini-details-view {
                 height: 0; opacity: 0; overflow: hidden; background: var(--detail-bg, rgba(0,0,0,0.1));
                 padding: 0 12px;
-                transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+                transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                            padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
             .gemini-details-view.expanded { height: auto; opacity: 1; padding: 10px 12px 14px 12px; border-top: 1px solid var(--border); max-height: 420px; overflow-y: auto; }
             .section-title {
@@ -6727,9 +6778,9 @@
             flex-shrink: 0;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
-            height: auto;
             max-height: 36px;
             align-self: start;
+            animation: gcFadeIn 0.2s ease-out;
         }
         .gc-filter-bar::-webkit-scrollbar { display: none; }
 
@@ -6744,7 +6795,9 @@
             background: transparent;
             color: #9aa0a6;
             font-weight: 400;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             line-height: 1.4;
             user-select: none;
             opacity: 0.7;
@@ -6761,9 +6814,9 @@
 
         .gc-sidebar-toolbar {
             padding: 4px 12px;
-            height: auto;
             max-height: 40px;
             align-self: start;
+            animation: gcFadeIn 0.2s ease-out;
         }
 
         .gc-sidebar-btn {
@@ -6775,7 +6828,9 @@
             font-size: 12px;
             font-family: 'Google Sans', Roboto, sans-serif;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             user-select: none;
             opacity: 0.6;
         }
@@ -6992,6 +7047,12 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* Shared entrance animation for native UI injections */
+        @keyframes gcFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
     `);
   }
   var init_native_ui_styles = __esm({
@@ -7102,6 +7163,24 @@
           if (document.getElementById(PANEL_ID)) PanelUI.update();
         }
       }
+      function onSidebarChange() {
+        Core.invalidateSidebarCache();
+        NativeUI.markDirtyByZone("sidebar");
+        NativeUI.tick();
+      }
+      function onInputAreaChange() {
+        NativeUI.markDirtyByZone("input");
+        NativeUI.tick();
+      }
+      function onHeaderChange() {
+        NativeUI.markDirtyByZone("header");
+        NativeUI.tick();
+      }
+      function onPanelRemoved() {
+        if (ModuleRegistry.isEnabled("counter") && !document.getElementById(PANEL_ID)) {
+          PanelUI.create();
+        }
+      }
       function onDOMStructureChange() {
         Core.invalidateSidebarCache();
         if (ModuleRegistry.isEnabled("counter") && !document.getElementById(PANEL_ID)) {
@@ -7130,10 +7209,31 @@
         callback: onModelMutation,
         debounce: TIMINGS.MODEL_MUTATION_DEBOUNCE
       });
-      DOMWatcher.register("dom-structure", {
-        match: (m) => m.type === "childList",
-        callback: onDOMStructureChange,
+      DOMWatcher.register("sidebar-structure", {
+        match: (m) => m.type === "childList" && !!m.target?.closest?.('.sidenav-with-history-container, bard-sidenav, nav[role="navigation"]'),
+        callback: onSidebarChange,
         debounce: TIMINGS.NATIVEUI_DEBOUNCE
+      });
+      DOMWatcher.register("input-structure", {
+        match: (m) => m.type === "childList" && !!m.target?.closest?.("input-area-v2, .input-area-container, .bottom-container"),
+        callback: onInputAreaChange,
+        debounce: TIMINGS.NATIVEUI_DEBOUNCE
+      });
+      DOMWatcher.register("header-structure", {
+        match: (m) => m.type === "childList" && !!m.target?.closest?.(".conversation-title-container"),
+        callback: onHeaderChange,
+        debounce: TIMINGS.NATIVEUI_DEBOUNCE
+      });
+      DOMWatcher.register("panel-guard", {
+        match: (m) => {
+          if (m.type !== "childList" || !m.removedNodes?.length) return false;
+          for (const n of m.removedNodes) {
+            if (n.id === PANEL_ID) return true;
+          }
+          return false;
+        },
+        callback: onPanelRemoved,
+        debounce: 500
       });
       function startOnboardingQueue() {
         let seen;
@@ -7181,8 +7281,17 @@
       } else {
         startOnboardingQueue();
       }
+      function waitForGeminiReady(cb, maxWait = 1e4) {
+        const start = Date.now();
+        (function check() {
+          const ready = !!(document.querySelector('.sidenav-with-history-container, bard-sidenav, nav[role="navigation"]') || document.querySelector("input-area-v2, .input-area-container, .bottom-container"));
+          if (ready) cb();
+          else if (Date.now() - start < maxWait) requestAnimationFrame(check);
+          else cb();
+        })();
+      }
       lazyDetect();
-      onDOMStructureChange();
+      waitForGeminiReady(() => onDOMStructureChange());
       var pollTimer = setInterval(lazyDetect, TIMINGS.SLOW_POLL);
       document.addEventListener("visibilitychange", () => {
         if (document.visibilityState === "visible") {
