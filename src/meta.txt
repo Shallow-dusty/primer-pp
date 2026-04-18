@@ -5,6 +5,10 @@
 // @description  模块化架构：可扩展的 Gemini 助手平台 - 原生 UI 集成 + 模块引导 + 计数器 + 热力图 + 配额追踪 + 对话文件夹 (Pure Enhancement)
 // @author       Script Weaver
 // @match        https://gemini.google.com/*
+// @homepageURL  https://github.com/Shallow-dusty/primer-pp
+// @supportURL   https://github.com/Shallow-dusty/primer-pp/issues
+// @updateURL    https://raw.githubusercontent.com/Shallow-dusty/primer-pp/main/primer-pp.user.js
+// @downloadURL  https://raw.githubusercontent.com/Shallow-dusty/primer-pp/main/primer-pp.user.js
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
