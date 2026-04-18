@@ -501,11 +501,12 @@
         _sidebarCacheTime: 0,
         scanSidebarChats(forceRefresh = false) {
           const now = Date.now();
-          if (!forceRefresh && this._sidebarCache && now - this._sidebarCacheTime < 2e3 && (this._sidebarCache.length === 0 || this._sidebarCache[0].element?.isConnected)) {
+          const links = document.querySelectorAll('a[href*="/app/"]');
+          if (!forceRefresh && this._sidebarCache && now - this._sidebarCacheTime < 2e3 && this._sidebarCache.length === links.length && (this._sidebarCache.length === 0 || this._sidebarCache[0].element?.isConnected)) {
             return this._sidebarCache;
           }
           const items = [];
-          document.querySelectorAll('a[href*="/app/"]').forEach((el) => {
+          links.forEach((el) => {
             const href = el.getAttribute("href") || "";
             const match = href.match(/\/app\/([a-zA-Z0-9\-_]+)/);
             if (match) {
@@ -592,11 +593,18 @@
           input: ["prompt-vault", "ui-tweaks", "default-model"],
           header: ["export"]
         },
+        _clearRetryTimer() {
+          if (this._retryTimer) {
+            clearTimeout(this._retryTimer);
+            this._retryTimer = null;
+          }
+        },
         markAllDirty() {
           ModuleRegistry.enabledModules.forEach((id) => {
             this._dirtyModules.add(id);
             delete this._retryCount[id];
           });
+          this._clearRetryTimer();
         },
         /** Mark only modules that inject into a specific DOM zone */
         markDirtyByZone(zone) {
@@ -608,10 +616,12 @@
               delete this._retryCount[id];
             }
           }
+          this._clearRetryTimer();
         },
         markDirty(id) {
           this._dirtyModules.add(id);
           delete this._retryCount[id];
+          this._clearRetryTimer();
         },
         remove(id) {
           const el = document.getElementById(id);
@@ -703,6 +713,11 @@
           let needsRetry = false;
           const toProcess = [...this._dirtyModules];
           for (const id of toProcess) {
+            if (!ModuleRegistry.isEnabled(id)) {
+              this._dirtyModules.delete(id);
+              delete this._retryCount[id];
+              continue;
+            }
             const mod = ModuleRegistry.modules[id];
             if (typeof mod?.injectNativeUI === "function") {
               try {
@@ -740,7 +755,7 @@
   var require_date_utils = __commonJS({
     "lib/date_utils.js"(exports, module) {
       "use strict";
-      function formatLocalDate3(d) {
+      function formatLocalDate4(d) {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, "0");
         const day = String(d.getDate()).padStart(2, "0");
@@ -751,7 +766,7 @@
         if (d.getHours() < resetHour) {
           d.setDate(d.getDate() - 1);
         }
-        return formatLocalDate3(d);
+        return formatLocalDate4(d);
       }
       function getDayKeyForDate(date, resetHour) {
         return getDayKey(resetHour, date);
@@ -760,7 +775,7 @@
         const [y, m, d] = dateStr.split("-").map(Number);
         return new Date(y, m - 1, d);
       }
-      module.exports = { formatLocalDate: formatLocalDate3, getDayKey, getDayKeyForDate, parseLocalDate };
+      module.exports = { formatLocalDate: formatLocalDate4, getDayKey, getDayKeyForDate, parseLocalDate };
     }
   });
 
@@ -919,7 +934,7 @@
   var require_counter_calc = __commonJS({
     "lib/counter_calc.js"(exports, module) {
       "use strict";
-      var { formatLocalDate: formatLocalDate3, getDayKey, parseLocalDate } = require_date_utils();
+      var { formatLocalDate: formatLocalDate4, getDayKey, parseLocalDate } = require_date_utils();
       function calculateStreaks2(dailyCounts, resetHour, now) {
         const dates = Object.keys(dailyCounts || {}).sort();
         if (dates.length === 0) return { current: 0, best: 0 };
@@ -942,12 +957,12 @@
         const yesterdayDate = new Date(ref.getTime());
         if (yesterdayDate.getHours() < resetHour) yesterdayDate.setDate(yesterdayDate.getDate() - 1);
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayStr = formatLocalDate3(yesterdayDate);
+        const yesterdayStr = formatLocalDate4(yesterdayDate);
         const startStr = dailyCounts[todayStr]?.messages > 0 ? todayStr : yesterdayStr;
         let checkDate = parseLocalDate(startStr);
         let current = 0;
         while (true) {
-          const key = formatLocalDate3(checkDate);
+          const key = formatLocalDate4(checkDate);
           if (dailyCounts[key] && dailyCounts[key].messages > 0) {
             current++;
             checkDate.setDate(checkDate.getDate() - 1);
@@ -1186,6 +1201,13 @@
             this._saveTimer = null;
             this.saveData();
           }, 300);
+        },
+        /** Immediately persist any pending counter state. Safe to call from pagehide/beforeunload. */
+        flushPendingSave() {
+          if (!this._saveTimer) return;
+          clearTimeout(this._saveTimer);
+          this._saveTimer = null;
+          this.saveData();
         },
         // --- Counting logic ---
         ensureTodayEntry() {
@@ -1574,7 +1596,7 @@
   var require_export_formatter = __commonJS({
     "lib/export_formatter.js"(exports, module) {
       var { getWeightedQuota: getWeightedQuota2 } = require_quota_calc();
-      var { formatLocalDate: formatLocalDate3 } = require_date_utils();
+      var { formatLocalDate: formatLocalDate4 } = require_date_utils();
       function exportCSV2(dailyCounts, opts = {}) {
         const header = "Date,Messages,Chats,Flash,Thinking,Pro,Weighted";
         const rows = [];
@@ -1602,7 +1624,7 @@
         return header + "\n" + rows.join("\n") + "\n";
       }
       function exportMarkdown2(dailyCounts, opts = {}) {
-        const now = formatLocalDate3(/* @__PURE__ */ new Date());
+        const now = formatLocalDate4(/* @__PURE__ */ new Date());
         const user = opts.user || "Unknown";
         const lines = [];
         lines.push("# Gemini Usage Report");
@@ -3838,11 +3860,12 @@
           }
           if (p.modelKey !== modelKey && modelBadge) {
             const mc = cm.MODEL_CONFIG[modelKey];
-            if (!mc) return;
-            modelBadge.textContent = mc.label;
-            modelBadge.style.background = mc.color;
-            modelBadge.style.color = modelKey === "flash" ? "#000" : "#fff";
-            p.modelKey = modelKey;
+            if (mc) {
+              modelBadge.textContent = mc.label;
+              modelBadge.style.background = mc.color;
+              modelBadge.style.color = modelKey === "flash" ? "#000" : "#fff";
+              p.modelKey = modelKey;
+            }
           }
           if (p.val !== val) {
             const numericVal = typeof val === "number" ? val : -1;
@@ -4153,6 +4176,16 @@
     const lower = href.toLowerCase().trim();
     return !lower.match(/^(javascript|data|vbscript):/);
   }
+  function safeHexColor(c, fallback = "#8ab4f8") {
+    return typeof c === "string" && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : fallback;
+  }
+  function isSafeRegex(src) {
+    if (typeof src !== "string") return false;
+    if (src.length > 80) return false;
+    if (/([+*?]|\{\d+,?\d*\})\s*\)\s*[+*?{]/.test(src)) return false;
+    if (src.includes("|") && /[+*]|\{\d+,?\d*\}/.test(src)) return false;
+    return true;
+  }
   var FoldersModule;
   var init_folders = __esm({
     "src/modules/folders.js"() {
@@ -4460,9 +4493,9 @@
                 }
                 if (rule.type === "regex" && rule.value) {
                   try {
-                    if (/([+*?]|\{\d+,?\d*\})\s*\)\s*[+*?{]/.test(rule.value)) return false;
+                    if (!isSafeRegex(rule.value)) return false;
                     const regex = new RegExp(rule.value, "i");
-                    return regex.test(chat.title.substring(0, 500));
+                    return regex.test(chat.title.substring(0, 200));
                   } catch {
                     return false;
                   }
@@ -4504,7 +4537,7 @@
                     width: 6px;
                     height: 6px;
                     border-radius: 50%;
-                    background: ${folder.color};
+                    background: ${safeHexColor(folder.color)};
                     margin-right: 6px;
                     flex-shrink: 0;
                     vertical-align: middle;
@@ -5399,7 +5432,7 @@
   });
 
   // src/modules/prompt_vault.js
-  var PromptVaultModule;
+  var import_date_utils3, PromptVaultModule;
   var init_prompt_vault = __esm({
     "src/modules/prompt_vault.js"() {
       init_logger();
@@ -5409,6 +5442,7 @@
       init_state();
       init_icons();
       init_counter();
+      import_date_utils3 = __toESM(require_date_utils());
       PromptVaultModule = {
         id: "prompt-vault",
         name: NativeUI.t("提示词金库", "Prompt Vault"),
@@ -5733,7 +5767,7 @@
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = `primer-pp-prompts-${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}.json`;
+          a.download = `primer-pp-prompts-${(0, import_date_utils3.formatLocalDate)(/* @__PURE__ */ new Date())}.json`;
           a.click();
           URL.revokeObjectURL(url);
           NativeUI.showToast(NativeUI.t("提示词已导出", "Prompts exported"));
@@ -6609,12 +6643,16 @@
         _applyCSS() {
           if (this._styleEl) this._styleEl.remove();
           const rules = [];
+          const clampPx = (v, fallback, min, max) => {
+            const n = Math.floor(Number(v));
+            return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
+          };
           if (this.features.chatWidth.enabled) {
-            const w = this.features.chatWidth.value || 900;
+            const w = clampPx(this.features.chatWidth.value, 900, 400, 4e3);
             rules.push("main .conversation-container, main .chat-window { max-width: " + w + "px !important; }");
           }
           if (this.features.sidebarWidth.enabled) {
-            const w = this.features.sidebarWidth.value || 280;
+            const w = clampPx(this.features.sidebarWidth.value, 280, 160, 800);
             rules.push("bard-sidenav { width: " + w + "px !important; min-width: " + w + "px !important; }");
           }
           if (this.features.hideGems.enabled) {
@@ -7307,6 +7345,16 @@
             clearInterval(pollTimer);
             pollTimer = null;
           }
+          try {
+            CounterModule.flushPendingSave?.();
+          } catch (e) {
+          }
+        }
+      });
+      window.addEventListener("pagehide", () => {
+        try {
+          CounterModule.flushPendingSave?.();
+        } catch (e) {
         }
       });
       GM_registerMenuCommand("🧰 Debug: Show Detected User", () => {
