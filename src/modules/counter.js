@@ -194,6 +194,14 @@ export const CounterModule = {
         }, 300);
     },
 
+    /** Immediately persist any pending counter state. Safe to call from pagehide/beforeunload. */
+    flushPendingSave() {
+        if (!this._saveTimer) return;
+        clearTimeout(this._saveTimer);
+        this._saveTimer = null;
+        this.saveData();
+    },
+
     // --- Counting logic ---
     ensureTodayEntry() {
         const today = Core.getDayKey(this.resetHour);

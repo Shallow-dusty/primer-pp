@@ -299,7 +299,15 @@ document.addEventListener('visibilitychange', () => {
         }
     } else {
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        // Tab going hidden — flush any pending counter state before the page may get suspended/discarded.
+        try { CounterModule.flushPendingSave?.(); } catch (e) { /* silent */ }
     }
+});
+
+// Page unload path — flush pending state synchronously so the 300ms debounce
+// window cannot swallow the most recent message increment.
+window.addEventListener('pagehide', () => {
+    try { CounterModule.flushPendingSave?.(); } catch (e) { /* silent */ }
 });
 
 // ╔══════════════════════════════════════════════════════════════════════════╗
