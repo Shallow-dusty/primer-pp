@@ -131,13 +131,24 @@ export const Core = {
 
     scanSidebarChats(forceRefresh = false) {
         const now = Date.now();
+        // Count live chat links up front — cheap query, reused for cache
+        // validation and for building the item list below. The count check
+        // catches the races the TTL alone cannot:
+        //   1. Initial load: cache was seeded with [] while Gemini was still
+        //      wiring up the sidebar; chat links appear inside the TTL but
+        //      the old length===0 cache path kept returning empty.
+        //   2. Incremental load / virtual scroll: new chats are appended
+        //      while the cached first element is still connected, so the
+        //      previous `isConnected` probe missed the growth.
+        const links = document.querySelectorAll('a[href*="/app/"]');
         if (!forceRefresh && this._sidebarCache &&
             now - this._sidebarCacheTime < 2000 &&
+            this._sidebarCache.length === links.length &&
             (this._sidebarCache.length === 0 || this._sidebarCache[0].element?.isConnected)) {
             return this._sidebarCache;
         }
         const items = [];
-        document.querySelectorAll('a[href*="/app/"]').forEach(el => {
+        links.forEach(el => {
             const href = el.getAttribute('href') || '';
             const match = href.match(/\/app\/([a-zA-Z0-9\-_]+)/);
             if (match) {
