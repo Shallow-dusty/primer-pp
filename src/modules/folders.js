@@ -14,6 +14,13 @@ function isValidChatHref(href) {
     return !lower.match(/^(javascript|data|vbscript):/);
 }
 
+// Return a safe hex color or the fallback. Used wherever stored folder color
+// is spliced into a cssText template — storage tampering otherwise permits
+// CSS injection even though the normal UI picker only writes valid hex.
+function safeHexColor(c, fallback = '#8ab4f8') {
+    return typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : fallback;
+}
+
 // Reject regex sources likely to exhibit catastrophic backtracking. Not a
 // complete decision procedure (impossible via syntax alone) but covers the
 // well-known ReDoS families: nested quantifiers, and any alternation
@@ -403,7 +410,7 @@ export const FoldersModule = {
                     width: 6px;
                     height: 6px;
                     border-radius: 50%;
-                    background: ${folder.color};
+                    background: ${safeHexColor(folder.color)};
                     margin-right: 6px;
                     flex-shrink: 0;
                     vertical-align: middle;
