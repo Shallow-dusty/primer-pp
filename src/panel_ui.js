@@ -921,14 +921,17 @@ export const PanelUI = {
             p.accountType = accountType;
         }
 
-        // Model badge
+        // Model badge — an unknown modelKey (e.g. Gemini ships a new variant we
+        // haven't mapped yet) must only skip the badge, not abort the rest of
+        // update() and freeze the panel.
         if (p.modelKey !== modelKey && modelBadge) {
             const mc = cm.MODEL_CONFIG[modelKey];
-            if (!mc) return;
-            modelBadge.textContent = mc.label;
-            modelBadge.style.background = mc.color;
-            modelBadge.style.color = modelKey === 'flash' ? '#000' : '#fff';
-            p.modelKey = modelKey;
+            if (mc) {
+                modelBadge.textContent = mc.label;
+                modelBadge.style.background = mc.color;
+                modelBadge.style.color = modelKey === 'flash' ? '#000' : '#fff';
+                p.modelKey = modelKey;
+            }
         }
 
         // Big number + sub info
