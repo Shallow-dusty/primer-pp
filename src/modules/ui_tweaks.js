@@ -104,12 +104,21 @@ export const UITweaksModule = {
         if (this._styleEl) this._styleEl.remove();
         const rules = [];
 
+        // Coerce stored values to plain integers in a safe range — storage can
+        // be tampered from devtools, and the raw value is spliced into a CSS
+        // rule below, so any non-numeric content would let an attacker escape
+        // out of the declaration.
+        const clampPx = (v, fallback, min, max) => {
+            const n = Math.floor(Number(v));
+            return Number.isFinite(n) && n >= min && n <= max ? n : fallback;
+        };
+
         if (this.features.chatWidth.enabled) {
-            const w = this.features.chatWidth.value || 900;
+            const w = clampPx(this.features.chatWidth.value, 900, 400, 4000);
             rules.push('main .conversation-container, main .chat-window { max-width: ' + w + 'px !important; }');
         }
         if (this.features.sidebarWidth.enabled) {
-            const w = this.features.sidebarWidth.value || 280;
+            const w = clampPx(this.features.sidebarWidth.value, 280, 160, 800);
             rules.push('bard-sidenav { width: ' + w + 'px !important; min-width: ' + w + 'px !important; }');
         }
         if (this.features.hideGems.enabled) {
