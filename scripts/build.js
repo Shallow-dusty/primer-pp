@@ -35,14 +35,16 @@ if (!target || target === 'userscript') {
 }
 
 // --- Extension build ---
-// Strategy: bundle polyfill + main separately, then wrap in async IIFE
-// so polyfill can await chrome.storage.local.get() before main.js runs.
+// Strategy: bundle polyfill + main separately as IIFE, then concatenate inside
+// an async IIFE wrapper so polyfill can await chrome.storage.local.get() before
+// main.js runs. IIFE format keeps each bundle self-contained (no bare `export`
+// statements) while still allowing `globalThis.*` assignments to leak across.
 if (!target || target === 'extension') {
     try {
         const polyfillResult = buildSync({
             entryPoints: [path.join(root, 'src', 'platforms', 'extension', 'content.js')],
             bundle: true,
-            format: 'esm',
+            format: 'iife',
             write: false,
             target: 'es2020',
             charset: 'utf8',
@@ -51,7 +53,7 @@ if (!target || target === 'extension') {
         const mainResult = buildSync({
             entryPoints: [path.join(root, 'src', 'main.js')],
             bundle: true,
-            format: 'esm',
+            format: 'iife',
             write: false,
             target: 'es2020',
             charset: 'utf8',
