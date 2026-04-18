@@ -42,11 +42,19 @@ export const NativeUI = {
         header:  ['export'],
     },
 
+    _clearRetryTimer() {
+        if (this._retryTimer) {
+            clearTimeout(this._retryTimer);
+            this._retryTimer = null;
+        }
+    },
+
     markAllDirty() {
         ModuleRegistry.enabledModules.forEach(id => {
             this._dirtyModules.add(id);
             delete this._retryCount[id];
         });
+        this._clearRetryTimer();
     },
 
     /** Mark only modules that inject into a specific DOM zone */
@@ -59,11 +67,13 @@ export const NativeUI = {
                 delete this._retryCount[id];
             }
         }
+        this._clearRetryTimer();
     },
 
     markDirty(id) {
         this._dirtyModules.add(id);
         delete this._retryCount[id];
+        this._clearRetryTimer();
     },
 
     remove(id) {
@@ -163,6 +173,13 @@ export const NativeUI = {
         let needsRetry = false;
         const toProcess = [...this._dirtyModules];
         for (const id of toProcess) {
+            // Skip modules the user has disabled between mark and tick — otherwise a
+            // pending retry could "resurrect" injection after the module was turned off.
+            if (!ModuleRegistry.isEnabled(id)) {
+                this._dirtyModules.delete(id);
+                delete this._retryCount[id];
+                continue;
+            }
             const mod = ModuleRegistry.modules[id];
             if (typeof mod?.injectNativeUI === 'function') {
                 try {
