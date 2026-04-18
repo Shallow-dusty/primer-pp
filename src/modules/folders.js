@@ -14,6 +14,20 @@ function isValidChatHref(href) {
     return !lower.match(/^(javascript|data|vbscript):/);
 }
 
+// Reject regex sources likely to exhibit catastrophic backtracking. Not a
+// complete decision procedure (impossible via syntax alone) but covers the
+// well-known ReDoS families: nested quantifiers, and any alternation
+// combined with a quantifier (e.g. `(a|aa)+`, `(foo|foobar)*`).
+function isSafeRegex(src) {
+    if (typeof src !== 'string') return false;
+    if (src.length > 80) return false;
+    // Nested quantifier: `...)+` or `...)*` followed by `+ * ? {`
+    if (/([+*?]|\{\d+,?\d*\})\s*\)\s*[+*?{]/.test(src)) return false;
+    // Alternation combined with a quantifier anywhere in the pattern.
+    if (src.includes('|') && /[+*]|\{\d+,?\d*\}/.test(src)) return false;
+    return true;
+}
+
 export const FoldersModule = {
     id: 'folders',
     name: NativeUI.t('对话文件夹', 'Chat Folders'),
@@ -339,10 +353,9 @@ export const FoldersModule = {
                     }
                     if (rule.type === 'regex' && rule.value) {
                         try {
-                            // Reject nested quantifiers (main ReDoS vector)
-                            if (/([+*?]|\{\d+,?\d*\})\s*\)\s*[+*?{]/.test(rule.value)) return false;
+                            if (!isSafeRegex(rule.value)) return false;
                             const regex = new RegExp(rule.value, 'i');
-                            return regex.test(chat.title.substring(0, 500));
+                            return regex.test(chat.title.substring(0, 200));
                         }
                         catch { return false; }
                     }
