@@ -5,6 +5,7 @@ import { PanelUI } from '../panel_ui.js';
 import { getCurrentTheme } from '../state.js';
 import { createIcon } from '../icons.js';
 import { CounterModule } from './counter.js';
+import { formatLocalDate } from '../../lib/date_utils.js';
 
 export const PromptVaultModule = {
     id: 'prompt-vault',
@@ -352,7 +353,7 @@ export const PromptVaultModule = {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `primer-pp-prompts-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `primer-pp-prompts-${formatLocalDate(new Date())}.json`;
         a.click();
         URL.revokeObjectURL(url);
         NativeUI.showToast(NativeUI.t('提示词已导出', 'Prompts exported'));
